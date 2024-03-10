@@ -274,5 +274,8 @@
     <string name="background_color_customization_programmatic_demo_description"
         description="Text displayed below the Background Color Customization  - Programmatic demo title.">Demonstrates how to programmatically set a custom background color to a map.</string>
     <string name="show_map_tiles">Show Map Tiles</string>
-    <string name="buttonText">Delete Zone</string>
+    <string name="deleteSelectedZoneButtonText">Delete Zone</string>
+    <string name="zones">Zones</string>
+    <string name="osts">OSTs</string>
+    <string name="editMarkersText">Edit</string>
 </resources>

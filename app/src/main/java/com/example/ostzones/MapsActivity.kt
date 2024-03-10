@@ -3,7 +3,10 @@ package com.example.ostzones
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ostzones.databinding.ActivityMapsBinding
@@ -19,16 +22,20 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.PolygonOptions
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener, OnMarkerDragListener, OnPolygonClickListener {
 
     private val ostZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markers: ArrayList<Marker> = arrayListOf()
     private var isDrawing = false
+    private var selectedPolygon: Polygon? = null
 
     private lateinit var googleMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
-    private lateinit var selectedPolygon: Polygon
+    private lateinit var bottomSheet: View
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +45,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        bottomSheet = findViewById<LinearLayout>(R.id.bottom_sheet)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -51,8 +63,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        //First marker is full opacity, only create the OstZone on clicking the first marker
-        if(marker.alpha < 1f) return false
+        //Only create the OstZone on clicking the first marker, and if there's >2 markers
+        //Only the first marker is full opacity
+        if(marker.alpha < 1f || markers.size < 3) return false
 
         createOstZone()
         Log.d("drawing polygon", "closing the polygon with " + markers.size + " points")
@@ -76,28 +89,41 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onPolygonClick(polygon: Polygon) {
-        val str = "just clicked a polygon named: " + ostZones[polygon]?.name
-        Log.d("polygon", str)
-        Toast.makeText(this, str, Toast.LENGTH_SHORT).show()
-        if(ostZones[polygon]?.name == null) ostZones[polygon]?.name = System.currentTimeMillis().toString()
         selectedPolygon = polygon
+        val ostZone = ostZones[polygon]
+        Log.d("polygon", "just clicked a polygon named: " + ostZone?.name)
+
+        (findViewById<TextView>(R.id.zoneName)).text = ostZone!!.name
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
-    fun something(view: View) {
-        selectedPolygon.remove()
+    fun deleteSelectedZone(view: View) {
+        selectedPolygon?.remove()
         ostZones.remove(selectedPolygon)
+        selectedPolygon = null
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
     }
 
     private fun handleMapTap(tappedPoint: LatLng) {
+        if(selectedPolygon != null){
+            deselectZone()
+            return
+        }
         Log.d("tapped point", "tapped point: " + tappedPoint.latitude + "-" + tappedPoint.longitude)
         googleMap.addMarker(getOstZoneMarker(tappedPoint))?.let { markers.add(it) }
         isDrawing = true
     }
 
+    private fun deselectZone(){
+        selectedPolygon = null
+        (findViewById<TextView>(R.id.zoneName)).text = ""
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+    }
+
     private fun getOstZoneMarker(tappedPoint: LatLng): MarkerOptions {
         return MarkerOptions().apply{
             position(tappedPoint)
-            draggable(true) //TODO draggable
+            draggable(true)
             if(isDrawing) alpha(0.25f)
         }
     }
@@ -109,8 +135,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             strokeColor(Color.BLACK)
             clickable(true)
         })
-        ostZones[polygon] = OstZone(polygon, null)
+        ostZones[polygon] = OstZone(polygon, "The Circle" + (ostZones.size + 1))
         isDrawing = false
     }
+
+    private fun selectedZone() = ostZones[selectedPolygon]
+    fun editZone(view: View) {
+        Toast.makeText(this, "Editing " + selectedZone()?.name, Toast.LENGTH_SHORT).show()
+    }
+    fun zonesNavClick(item: MenuItem) {
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+    }
+    fun ostsNavClick(item: MenuItem) {
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED}
 
 }
