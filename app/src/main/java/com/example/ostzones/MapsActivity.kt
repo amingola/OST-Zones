@@ -49,7 +49,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         bottomSheet = findViewById<LinearLayout>(R.id.bottom_sheet)
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -95,13 +94,29 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         (findViewById<TextView>(R.id.zoneName)).text = ostZone!!.name
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        showBottomSheetEditFunctionality()
     }
 
     fun deleteSelectedZone(view: View) {
         selectedPolygon?.remove()
         ostZones.remove(selectedPolygon)
         selectedPolygon = null
+        (findViewById<TextView>(R.id.zoneName)).text = ""
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+        showBottomSheetPlaceholder()
+    }
+
+    fun editZone(view: View) {
+        Toast.makeText(this, "Editing " + selectedZone()?.name, Toast.LENGTH_SHORT).show()
+    }
+
+    fun zonesNavClick(item: MenuItem) {
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+    }
+
+    fun ostsNavClick(item: MenuItem) {
+        Toast.makeText(this, "OSTs", Toast.LENGTH_SHORT).show()
+        //bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
     private fun handleMapTap(tappedPoint: LatLng) {
@@ -139,14 +154,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         isDrawing = false
     }
 
+    private fun showBottomSheetEditFunctionality() {
+        findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.VISIBLE
+        findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.GONE
+    }
+
+    private fun showBottomSheetPlaceholder() {
+        findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.GONE
+        findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.VISIBLE
+    }
+
     private fun selectedZone() = ostZones[selectedPolygon]
-    fun editZone(view: View) {
-        Toast.makeText(this, "Editing " + selectedZone()?.name, Toast.LENGTH_SHORT).show()
-    }
-    fun zonesNavClick(item: MenuItem) {
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-    }
-    fun ostsNavClick(item: MenuItem) {
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED}
 
 }
