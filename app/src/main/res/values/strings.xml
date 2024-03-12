@@ -278,4 +278,5 @@
     <string name="zones">Zones</string>
     <string name="osts">OSTs</string>
     <string name="editMarkersText">Edit</string>
+    <string name="saved_ost_zones_key">saved_ost_zones_key</string>
 </resources>

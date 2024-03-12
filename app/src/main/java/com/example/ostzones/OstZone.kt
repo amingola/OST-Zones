@@ -1,8 +1,9 @@
 package com.example.ostzones
 
-import com.google.android.gms.maps.model.Polygon
+import com.google.android.gms.maps.model.LatLng
 
-class OstZone(val polygon: Polygon, var name: String?) {
-
-    var isSelected = false
+class OstZone(val polygonPoints: List<LatLng>,
+              val polygonOptions: HashMap<String, Any>,
+              var name: String?) {
+    val id: Int? = null
 }

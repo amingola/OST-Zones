@@ -1,5 +1,6 @@
 package com.example.ostzones
 
+import DatabaseHelper
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -21,14 +22,18 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
-import com.google.android.gms.maps.model.PolygonOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener, OnMarkerDragListener, OnPolygonClickListener {
 
     private val ostZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markers: ArrayList<Marker> = arrayListOf()
+    private val databaseHelper = DatabaseHelper(this)
+    private val polygonOptions = hashMapOf<String, Any>(
+        "fillColor" to Color.RED,
+        "strokeColor" to Color.BLACK,
+        "clickable" to true)
+
     private var isDrawing = false
     private var selectedPolygon: Polygon? = null
 
@@ -58,7 +63,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap.setOnPolygonClickListener(this)
 
         //TODO move camera to user's location
-        //googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+            LatLng(41.712752765580035,-73.75673331320286), 20.0f))
+
+        loadSavedOstZones()
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -66,7 +74,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //Only the first marker is full opacity
         if(marker.alpha < 1f || markers.size < 3) return false
 
-        createOstZone()
+        drawOstZoneOnMapAndSave()
         Log.d("drawing polygon", "closing the polygon with " + markers.size + " points")
 
         for(m in markers) m.remove()
@@ -99,11 +107,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     fun deleteSelectedZone(view: View) {
         selectedPolygon?.remove()
+        ostZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
         ostZones.remove(selectedPolygon)
         selectedPolygon = null
+
+        showBottomSheetPlaceholder()
         (findViewById<TextView>(R.id.zoneName)).text = ""
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-        showBottomSheetPlaceholder()
     }
 
     fun editZone(view: View) {
@@ -119,6 +129,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
+    fun saveChangesClick(view: View){
+        databaseHelper.saveAllOstZones(ostZones.values)
+    }
+
     private fun handleMapTap(tappedPoint: LatLng) {
         if(selectedPolygon != null){
             deselectZone()
@@ -131,8 +145,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun deselectZone(){
         selectedPolygon = null
+        showBottomSheetPlaceholder()
         (findViewById<TextView>(R.id.zoneName)).text = ""
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
     }
 
     private fun getOstZoneMarker(tappedPoint: LatLng): MarkerOptions {
@@ -143,14 +157,21 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
     }
 
-    private fun createOstZone(){
-        val polygon = googleMap.addPolygon(PolygonOptions().apply {
-            addAll(markers.map { marker -> marker.position })
-            fillColor(Color.RED)
-            strokeColor(Color.BLACK)
-            clickable(true)
-        })
-        ostZones[polygon] = OstZone(polygon, "The Circle" + (ostZones.size + 1))
+    private fun drawOstZoneOnMapAndSave(){
+        val points = markers.map { marker -> marker.position }
+        val polygon = googleMap.addPolygon(Utilities.createPolygonFromPoints(points, polygonOptions))
+        val ostZone = databaseHelper.saveOstZone(
+            OstZone(points, polygonOptions, "The Circle")
+        )
+        ostZones[polygon] = ostZone
+        isDrawing = false
+    }
+
+    private fun loadOstZoneToMap(ostZone: OstZone){
+        val polygon = googleMap.addPolygon(
+            Utilities.createPolygonFromPoints(ostZone.polygonPoints, ostZone.polygonOptions)
+        )
+        ostZones[polygon] = ostZone
         isDrawing = false
     }
 
@@ -166,4 +187,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun selectedZone() = ostZones[selectedPolygon]
 
+    private fun loadSavedOstZones(){
+        //try{
+            for(ostZone in databaseHelper.getAllOstZones()){
+                loadOstZoneToMap(ostZone)
+            }
+        /*}catch (e: Exception){
+            Toast.makeText(this, "Failed to load saved OST Zones", Toast.LENGTH_SHORT).show()
+        }*/
+    }
 }
