@@ -40,12 +40,9 @@ class DatabaseHelper(context: Context) :
             put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
             put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
         }
-        val id = db.insert(TABLE_NAME, null, values)
-        val cursor = db.rawQuery("SELECT * FROM $TABLE_NAME WHERE $ROW_ID = ?", arrayOf(id.toString()))
-//        val cursor = db.rawQuery("SELECT *,"+CLASSES_TABLE_NAME +".rowid AS rowID"+" FROM "+CLASSES_TABLE_NAME , null);
-        cursor.close()
+        val row = db.insert(TABLE_NAME, null, values)
         db.close()
-        return createOstZoneFromCursor(cursor)
+        return ostZone.apply { id = row }
     }
 
     fun saveAllOstZones(usersOstZones: MutableCollection<OstZone>) {
@@ -80,7 +77,7 @@ class DatabaseHelper(context: Context) :
         return allOstZones
     }
 
-    fun removePolygon(id: Int): Int{
+    fun removePolygon(id: Long): Int{
         val db = this.writableDatabase
         val result = db.delete(TABLE_NAME, "$KEY_ID = ?", arrayOf(id.toString()))
         db.close()
@@ -89,12 +86,13 @@ class DatabaseHelper(context: Context) :
 
     @SuppressLint("Range")
     private fun createOstZoneFromCursor(cursor: Cursor): OstZone {
-        //val id = cursor.getInt(cursor.getColumnIndex(KEY_ID))
         val pointsJson = cursor.getString(cursor.getColumnIndex(KEY_POINTS))
         val polygonOptionsJson = cursor.getString(cursor.getColumnIndex(KEY_POLYGON_OPTIONS))
         val points = deserializePoints(pointsJson)
         val polygonOptions = deserializePolygonOptions(polygonOptionsJson)
-        return OstZone(points, polygonOptions, "The Circle")
+        return OstZone(points, polygonOptions, "The Circle").apply {
+            id = cursor.getLong(cursor.getColumnIndex(KEY_ID))
+        }
     }
 
     private fun serializePoints(points: List<LatLng>): String {

@@ -10,7 +10,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OSTZones"
-        android:screenOrientation="portrait"
         tools:targetApi="31">
 
         <meta-data
