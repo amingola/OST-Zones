@@ -22,6 +22,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
+import com.google.android.gms.maps.model.Polyline
+import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener, OnMarkerDragListener, OnPolygonClickListener {
@@ -36,6 +38,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private var isDrawing = false
     private var selectedPolygon: Polygon? = null
+    private var tempPolyline: Polyline? = null
 
     private lateinit var googleMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
@@ -60,6 +63,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap = map
         googleMap.setOnMapClickListener { tappedPoint -> handleMapTap(tappedPoint) }
         googleMap.setOnMarkerClickListener(this)
+        googleMap.setOnMarkerDragListener(this);
         googleMap.setOnPolygonClickListener(this)
 
         //TODO move camera to user's location
@@ -88,11 +92,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onMarkerDrag(marker: Marker) {
-        googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position));
+        googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
     }
 
     override fun onMarkerDragEnd(marker: Marker) {
-
+        redrawPolyline()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
@@ -140,7 +144,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
         Log.d("tapped point", "tapped point: " + tappedPoint.latitude + "-" + tappedPoint.longitude)
         googleMap.addMarker(getOstZoneMarker(tappedPoint))?.let { markers.add(it) }
+        redrawPolyline()
         isDrawing = true
+
+    }
+
+    private fun redrawPolyline() {
+        tempPolyline?.remove()
+        tempPolyline = googleMap.addPolyline(PolylineOptions().apply {
+            addAll(markers.map { marker -> marker.position })
+        })
     }
 
     private fun deselectZone(){
@@ -173,6 +186,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         )
         ostZones[polygon] = ostZone
         isDrawing = false
+        tempPolyline?.remove()
+        tempPolyline = null
     }
 
     private fun showBottomSheetEditFunctionality() {
