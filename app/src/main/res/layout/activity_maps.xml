@@ -44,19 +44,20 @@
 
         <!--Placeholder functionality-->
         <LinearLayout
-            android:id="@+id/bottom_sheet_placeholder">
+            android:id="@+id/bottom_sheet_placeholder"
+            android:orientation="vertical">
+
             <TextView
-                android:id="@+id/textView2"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Placeholder"
-                android:visibility="visible"/>
+                android:layout_gravity="center_horizontal"
+                android:text="Create new OST Zones by tapping the map to place markers"
+                android:textSize="16sp" />
 
             <Button
                 android:id="@+id/draw_new_zone_btn"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
                 android:layout_weight="1"
                 android:text="@string/draw_new_zone"
                 android:onClick="toggleDrawingNewZoneClick"/>
