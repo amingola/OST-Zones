@@ -134,11 +134,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
-    fun drawNewZoneClick(view: View){
-        bDrawing = true
-        findViewById<Button>(R.id.draw_new_zone_btn).apply {
-            isEnabled = false
-            text = context.getString(R.string.drawing_zone)
+    fun toggleDrawingNewZoneClick(view: View){
+        val drawNewZoneBtn = findViewById<Button>(R.id.draw_new_zone_btn)
+        if(!bDrawing) {
+            drawNewZoneBtn.text = getString(R.string.cancel_drawing_zone)
+            bDrawing = true
+        }else {
+            resetDrawing()
         }
     }
 
@@ -196,10 +198,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         bDrawing = false
         tempPolyline?.remove()
         tempPolyline = null
-        findViewById<Button>(R.id.draw_new_zone_btn).apply {
-            isEnabled = true
-            text = context.getString(R.string.draw_new_zone)
-        }
+        for(m in markers) m.remove()
+        markers.clear()
+        findViewById<Button>(R.id.draw_new_zone_btn).text = getString(R.string.draw_new_zone)
     }
 
     private fun showBottomSheetEditFunctionality() {

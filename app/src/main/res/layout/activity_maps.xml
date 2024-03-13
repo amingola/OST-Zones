@@ -59,7 +59,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/draw_new_zone"
-                android:onClick="drawNewZoneClick"/>
+                android:onClick="toggleDrawingNewZoneClick"/>
 
         </LinearLayout>
 
