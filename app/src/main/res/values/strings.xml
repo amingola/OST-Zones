@@ -279,4 +279,7 @@
     <string name="osts">OSTs</string>
     <string name="editMarkersText">Edit</string>
     <string name="saved_ost_zones_key">saved_ost_zones_key</string>
+    <string name="cancel_drawing">Cancel Drawing</string>
+    <string name="draw_new_zone">Draw new zone</string>
+    <string name="drawing_zone">Drawing zone…</string>
 </resources>

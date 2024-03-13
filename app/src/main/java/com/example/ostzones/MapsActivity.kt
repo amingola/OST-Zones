@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -36,7 +37,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         "strokeColor" to Color.BLACK,
         "clickable" to true)
 
-    private var isDrawing = false
+    private var bDrawing = false
     private var selectedPolygon: Polygon? = null
     private var tempPolyline: Polyline? = null
 
@@ -63,7 +64,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap = map
         googleMap.setOnMapClickListener { tappedPoint -> handleMapTap(tappedPoint) }
         googleMap.setOnMarkerClickListener(this)
-        googleMap.setOnMarkerDragListener(this);
+        googleMap.setOnMarkerDragListener(this)
         googleMap.setOnPolygonClickListener(this)
 
         //TODO move camera to user's location
@@ -133,8 +134,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
-    fun saveChangesClick(view: View){
-        databaseHelper.saveAllOstZones(ostZones.values)
+    fun drawNewZoneClick(view: View){
+        bDrawing = true
+        findViewById<Button>(R.id.draw_new_zone_btn).apply {
+            isEnabled = false
+            text = context.getString(R.string.drawing_zone)
+        }
     }
 
     private fun handleMapTap(tappedPoint: LatLng) {
@@ -142,11 +147,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             deselectZone()
             return
         }
-        Log.d("tapped point", "tapped point: " + tappedPoint.latitude + "-" + tappedPoint.longitude)
-        googleMap.addMarker(getOstZoneMarker(tappedPoint))?.let { markers.add(it) }
+        if(!bDrawing) return
+        val marker = getOstZoneMarker(tappedPoint, markers.isEmpty())
+        googleMap.addMarker(marker)?.let { markers.add(it) }
         redrawPolyline()
-        isDrawing = true
-
     }
 
     private fun redrawPolyline() {
@@ -162,11 +166,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         (findViewById<TextView>(R.id.zoneName)).text = ""
     }
 
-    private fun getOstZoneMarker(tappedPoint: LatLng): MarkerOptions {
+    private fun getOstZoneMarker(tappedPoint: LatLng, bFirstMarker: Boolean): MarkerOptions {
         return MarkerOptions().apply{
             position(tappedPoint)
             draggable(true)
-            if(isDrawing) alpha(0.25f)
+            if(!bFirstMarker) alpha(0.25f)
         }
     }
 
@@ -189,9 +193,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     private fun resetDrawing() {
-        isDrawing = false
+        bDrawing = false
         tempPolyline?.remove()
         tempPolyline = null
+        findViewById<Button>(R.id.draw_new_zone_btn).apply {
+            isEnabled = true
+            text = context.getString(R.string.draw_new_zone)
+        }
     }
 
     private fun showBottomSheetEditFunctionality() {
