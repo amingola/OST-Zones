@@ -177,7 +177,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             OstZone(points, polygonOptions, "The Circle")
         )
         ostZones[polygon] = ostZone
-        isDrawing = false
+        resetDrawing()
     }
 
     private fun loadOstZoneToMap(ostZone: OstZone){
@@ -185,6 +185,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             Utilities.createPolygonFromPoints(ostZone.polygonPoints, ostZone.polygonOptions)
         )
         ostZones[polygon] = ostZone
+        resetDrawing()
+    }
+
+    private fun resetDrawing() {
         isDrawing = false
         tempPolyline?.remove()
         tempPolyline = null
