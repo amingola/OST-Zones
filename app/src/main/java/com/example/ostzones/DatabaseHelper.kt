@@ -24,7 +24,7 @@ class DatabaseHelper(context: Context) :
 
     override fun onCreate(db: SQLiteDatabase) {
         val createTableQuery =
-            "CREATE TABLE $TABLE_NAME ($KEY_ID INTEGER PRIMARY KEY, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT)"
+            "CREATE TABLE $TABLE_NAME ($KEY_ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT)"
         db.execSQL(createTableQuery)
     }
 
@@ -42,7 +42,19 @@ class DatabaseHelper(context: Context) :
         }
         val row = db.insert(TABLE_NAME, null, values)
         db.close()
-        return ostZone.apply { id = row }
+        return ostZone.apply{ id = row }
+    }
+
+    fun updateOstZone(ostZone: OstZone): OstZone{
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            ostZone.id?.let { put(KEY_ID, it) }
+            put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
+            put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
+        }
+        db.update(TABLE_NAME,  values, "$KEY_ID = ?", arrayOf(ostZone.id.toString()))
+        db.close()
+        return ostZone
     }
 
     fun saveAllOstZones(usersOstZones: MutableCollection<OstZone>) {

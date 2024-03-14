@@ -282,4 +282,5 @@
     <string name="cancel_drawing">Cancel Drawing</string>
     <string name="draw_new_zone">Draw new zone</string>
     <string name="cancel_drawing_zone">Cancel Drawing Zone…</string>
+    <string name="minimum_zone_points_warning">Zones must have at least 3 points</string>
 </resources>

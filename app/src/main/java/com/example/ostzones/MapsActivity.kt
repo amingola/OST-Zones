@@ -38,6 +38,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         "clickable" to true)
 
     private var bDrawing = false
+    private var bEditing = false
     private var selectedPolygon: Polygon? = null
     private var tempPolyline: Polyline? = null
 
@@ -75,25 +76,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        //Only create the OstZone on clicking the first marker, and if there's >2 markers
-        //Only the first marker is full opacity
-        if(marker.alpha < 1f || markers.size < 3) return false
+        //Only create the OstZone on clicking the first marker, only the first marker is full opacity
+        if(marker.alpha < 1f) return false
+        if(markers.size < 3){
+            Toast.makeText(this, getString(R.string.minimum_zone_points_warning), Toast.LENGTH_LONG).show()
+            return false
+        }
 
-        drawOstZoneOnMapAndSave()
-        Log.d("drawing polygon", "closing the polygon with " + markers.size + " points")
-
-        for(m in markers) m.remove()
+        drawOstZoneOnMapAndSave(selectedZone())
+        for (m in markers) m.remove()
         markers.clear()
 
         return true
     }
+
 
     override fun onMarkerDragStart(marker: Marker) {
 
     }
 
     override fun onMarkerDrag(marker: Marker) {
-        googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
+        //googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
     }
 
     override fun onMarkerDragEnd(marker: Marker) {
@@ -101,28 +104,29 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onPolygonClick(polygon: Polygon) {
+        if(bDrawing) return
+
         selectedPolygon = polygon
         val ostZone = ostZones[polygon]
         Log.d("polygon", "just clicked a polygon named: " + ostZone?.name)
 
-        (findViewById<TextView>(R.id.zoneName)).text = ostZone!!.name
+        if(ostZone != null) (findViewById<TextView>(R.id.zoneName)).text = ostZone.name
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
         showBottomSheetEditFunctionality()
     }
 
-    fun deleteSelectedZone(view: View) {
-        selectedPolygon?.remove()
-        ostZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
-        ostZones.remove(selectedPolygon)
-        selectedPolygon = null
-
-        showBottomSheetPlaceholder()
-        (findViewById<TextView>(R.id.zoneName)).text = ""
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+    fun deleteSelectedZoneClick(view: View) {
+        deleteSelectedZone()
     }
 
     fun editZone(view: View) {
-        Toast.makeText(this, "Editing " + selectedZone()?.name, Toast.LENGTH_SHORT).show()
+        val points = selectedPolygon?.points!!.toMutableList().apply{ removeLast() }
+        for(point in points){
+            drawMarkerOnMap(point)
+        }
+
+        bDrawing = true
+        bEditing = true
     }
 
     fun zonesNavClick(item: MenuItem) {
@@ -150,9 +154,50 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             return
         }
         if(!bDrawing) return
+        drawMarkerOnMap(tappedPoint)
+        redrawPolyline()
+    }
+
+    private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?){
+        val points = markers.map { marker -> marker.position }
+        val polygon = googleMap.addPolygon(Utilities.createPolygonFromPoints(points, polygonOptions))
+
+        //Create a new OST Zone
+        if(existingOstZone == null) {
+            val ostZone = databaseHelper.saveOstZone(
+                OstZone(points, polygonOptions, "The Circle")
+            )
+            ostZones[polygon] = ostZone
+
+        //Overwrite existing OST Zone
+        }else{
+            existingOstZone.polygonPoints = points
+            existingOstZone.polygonOptions = polygonOptions
+            databaseHelper.updateOstZone(existingOstZone) //TODO verify this overwrites
+            removeSelectedZoneFromMap()
+        }
+        resetDrawing()
+    }
+
+    private fun loadOstZoneToMap(ostZone: OstZone){
+        val polygon = googleMap.addPolygon(
+            Utilities.createPolygonFromPoints(ostZone.polygonPoints, ostZone.polygonOptions)
+        )
+        ostZones[polygon] = ostZone
+        resetDrawing()
+    }
+
+    private fun drawMarkerOnMap(tappedPoint: LatLng) {
         val marker = getOstZoneMarker(tappedPoint, markers.isEmpty())
         googleMap.addMarker(marker)?.let { markers.add(it) }
-        redrawPolyline()
+    }
+
+    private fun getOstZoneMarker(tappedPoint: LatLng, bFirstMarker: Boolean): MarkerOptions {
+        return MarkerOptions().apply{
+            position(tappedPoint)
+            draggable(true)
+            if(!bFirstMarker) alpha(0.25f)
+        }
     }
 
     private fun redrawPolyline() {
@@ -168,32 +213,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         (findViewById<TextView>(R.id.zoneName)).text = ""
     }
 
-    private fun getOstZoneMarker(tappedPoint: LatLng, bFirstMarker: Boolean): MarkerOptions {
-        return MarkerOptions().apply{
-            position(tappedPoint)
-            draggable(true)
-            if(!bFirstMarker) alpha(0.25f)
-        }
-    }
-
-    private fun drawOstZoneOnMapAndSave(){
-        val points = markers.map { marker -> marker.position }
-        val polygon = googleMap.addPolygon(Utilities.createPolygonFromPoints(points, polygonOptions))
-        val ostZone = databaseHelper.saveOstZone(
-            OstZone(points, polygonOptions, "The Circle")
-        )
-        ostZones[polygon] = ostZone
-        resetDrawing()
-    }
-
-    private fun loadOstZoneToMap(ostZone: OstZone){
-        val polygon = googleMap.addPolygon(
-            Utilities.createPolygonFromPoints(ostZone.polygonPoints, ostZone.polygonOptions)
-        )
-        ostZones[polygon] = ostZone
-        resetDrawing()
-    }
-
     private fun resetDrawing() {
         bDrawing = false
         tempPolyline?.remove()
@@ -201,6 +220,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         for(m in markers) m.remove()
         markers.clear()
         findViewById<Button>(R.id.draw_new_zone_btn).text = getString(R.string.draw_new_zone)
+    }
+
+    private fun deleteSelectedZone() {
+        ostZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
+        removeSelectedZoneFromMap()
+    }
+
+    private fun removeSelectedZoneFromMap() {
+        selectedPolygon?.remove()
+        ostZones.remove(selectedPolygon)
+        selectedPolygon = null
+
+        showBottomSheetPlaceholder()
+        (findViewById<TextView>(R.id.zoneName)).text = ""
     }
 
     private fun showBottomSheetEditFunctionality() {
