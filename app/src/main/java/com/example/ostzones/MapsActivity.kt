@@ -124,7 +124,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         for(point in points){
             drawMarkerOnMap(point)
         }
-
         bDrawing = true
         bEditing = true
     }
@@ -149,7 +148,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     private fun handleMapTap(tappedPoint: LatLng) {
-        if(selectedPolygon != null){
+        if(selectedPolygon != null && !bEditing){
             deselectZone()
             return
         }
@@ -175,6 +174,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             existingOstZone.polygonOptions = polygonOptions
             databaseHelper.updateOstZone(existingOstZone) //TODO verify this overwrites
             removeSelectedZoneFromMap()
+            bEditing = false
         }
         resetDrawing()
     }
