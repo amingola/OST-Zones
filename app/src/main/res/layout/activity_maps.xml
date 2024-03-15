@@ -19,13 +19,16 @@
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="fill_vertical" />
-
-        <!--        <Button-->
-        <!--            android:layout_width="wrap_content"-->
-        <!--            android:layout_height="wrap_content"-->
-        <!--            android:text="Button"-->
-        <!--            android:layout_margin="16dp"/>-->
+            android:layout_gravity="fill_vertical"/>
+            <Button
+                android:id="@+id/draw_new_zone_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignEnd="@id/map"
+                android:layout_alignTop="@id/map"
+                android:layout_margin="16dp"
+                android:text="@string/draw_new_zone"
+                android:onClick="toggleDrawingNewZoneClick"/>
     </RelativeLayout>
 
     <!--The Tray-->
@@ -46,21 +49,12 @@
         <LinearLayout
             android:id="@+id/bottom_sheet_placeholder"
             android:orientation="vertical">
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:text="Create new OST Zones by tapping the map to place markers"
                 android:textSize="16sp" />
-
-            <Button
-                android:id="@+id/draw_new_zone_btn"
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:text="@string/draw_new_zone"
-                android:onClick="toggleDrawingNewZoneClick"/>
 
         </LinearLayout>
 
@@ -91,7 +85,6 @@
                     android:layout_height="wrap_content"
                     android:onClick="toggleEditingSelectedZone"
                     android:text="@string/edit_selected_zone"/>
-
                 <Button
                     android:id="@+id/delete_selected_zone_btn"
                     style="?android:attr/buttonBarButtonStyle"
