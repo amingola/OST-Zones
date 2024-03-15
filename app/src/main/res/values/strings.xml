@@ -274,13 +274,14 @@
     <string name="background_color_customization_programmatic_demo_description"
         description="Text displayed below the Background Color Customization  - Programmatic demo title.">Demonstrates how to programmatically set a custom background color to a map.</string>
     <string name="show_map_tiles">Show Map Tiles</string>
-    <string name="deleteSelectedZoneButtonText">Delete Zone</string>
+    <string name="delete_selected_zone">Delete Zone</string>
     <string name="zones">Zones</string>
     <string name="osts">OSTs</string>
-    <string name="editMarkersText">Edit</string>
+    <string name="edit_selected_zone">Edit</string>
     <string name="saved_ost_zones_key">saved_ost_zones_key</string>
     <string name="cancel_drawing">Cancel Drawing</string>
     <string name="draw_new_zone">Draw new zone</string>
     <string name="cancel_drawing_zone">Cancel Drawing Zone…</string>
     <string name="minimum_zone_points_warning">Zones must have at least 3 points</string>
+    <string name="cancel_editing">Cancel Editing</string>
 </resources>

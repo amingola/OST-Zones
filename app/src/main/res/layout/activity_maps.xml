@@ -85,21 +85,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
                 <Button
-                    android:id="@+id/edit_markers_btn"
+                    android:id="@+id/edit_selected_zone_btn"
                     style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:onClick="editZone"
-                    android:text="@string/editMarkersText"/>
+                    android:onClick="toggleEditingSelectedZone"
+                    android:text="@string/edit_selected_zone"/>
 
                 <Button
-                    android:id="@+id/delete_zone_btn"
+                    android:id="@+id/delete_selected_zone_btn"
                     style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:onClick="deleteSelectedZoneClick"
-                    android:text="@string/deleteSelectedZoneButtonText"
+                    android:text="@string/delete_selected_zone"
                     android:textColor="#FF0000" />
             </TableRow>
         </LinearLayout>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="delete_zone_btn" type="id" />
+    <item name="delete_selected_zone_btn" type="id" />
     <item name="coordinator_layout" type="id" />
     <item name="bottom_navigation" type="id" />
 </resources>
