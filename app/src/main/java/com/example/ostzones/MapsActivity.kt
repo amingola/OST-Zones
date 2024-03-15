@@ -120,7 +120,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     fun toggleEditingSelectedZone(view: View) {
-
         if(!bEditing){
             bDrawing = true
             bEditing = true
@@ -136,10 +135,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             val centroidMarkerOptions = Utilities.getCentroidMarkerOptions(centroidPoint, markers.isEmpty())
             centroidMarker = googleMap.addMarker(centroidMarkerOptions)
         }else{
-            (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.edit_selected_zone)
             resetDrawing()
         }
-
     }
 
     fun zonesNavClick(item: MenuItem) {
@@ -187,6 +184,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             existingOstZone.polygonPoints = points
             existingOstZone.polygonOptions = polygonOptions
             databaseHelper.updateOstZone(existingOstZone)
+
+            ostZones.remove(selectedPolygon)
+            ostZones[polygon] = existingOstZone
+
             removeSelectedZoneFromMap()
         }
         resetDrawing()
@@ -232,6 +233,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         centroidMarker = null
 
         findViewById<Button>(R.id.draw_new_zone_btn).text = getString(R.string.draw_new_zone)
+        (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.edit_selected_zone)
     }
 
     private fun deleteSelectedZone() {
