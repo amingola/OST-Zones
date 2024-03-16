@@ -16,15 +16,16 @@ class DatabaseHelper(context: Context) :
         private const val DATABASE_VERSION = 1
         private const val DATABASE_NAME = "OstZones"
         private const val TABLE_NAME = "ost_zones"
-        private const val ROW_ID = "rowId"
         private const val KEY_ID = "id"
+        private const val KEY_NAME = "name"
         private const val KEY_POINTS = "points"
         private const val KEY_POLYGON_OPTIONS = "polygon_options"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
         val createTableQuery =
-            "CREATE TABLE $TABLE_NAME ($KEY_ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT)"
+            "CREATE TABLE $TABLE_NAME ($KEY_ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                    " $KEY_NAME, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT)"
         db.execSQL(createTableQuery)
     }
 
@@ -37,6 +38,7 @@ class DatabaseHelper(context: Context) :
         val db = this.writableDatabase
         val values = ContentValues().apply {
             ostZone.id?.let { put(KEY_ID, it) }
+            put(KEY_NAME, ostZone.name)
             put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
             put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
         }
@@ -49,6 +51,7 @@ class DatabaseHelper(context: Context) :
         val db = this.writableDatabase
         val values = ContentValues().apply {
             ostZone.id?.let { put(KEY_ID, it) }
+            put(KEY_NAME, ostZone.name)
             put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
             put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
         }
@@ -63,8 +66,8 @@ class DatabaseHelper(context: Context) :
 
         for(ostZone in usersOstZones){
             val values = ContentValues().apply {
-                //TODO update this with saving the other data in OstZone (not just the polygon)
                 ostZone.id?.let { put(KEY_ID, it) }
+                put(KEY_NAME, ostZone.name)
                 put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
                 put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
             }
@@ -96,13 +99,20 @@ class DatabaseHelper(context: Context) :
         return result
     }
 
+    fun clearAllData() {
+        val db = this.writableDatabase
+        db.delete(TABLE_NAME, null, null)
+        db.close()
+    }
+
     @SuppressLint("Range")
     private fun createOstZoneFromCursor(cursor: Cursor): OstZone {
+        val name = cursor.getString(cursor.getColumnIndex(KEY_NAME))
         val pointsJson = cursor.getString(cursor.getColumnIndex(KEY_POINTS))
         val polygonOptionsJson = cursor.getString(cursor.getColumnIndex(KEY_POLYGON_OPTIONS))
         val points = deserializePoints(pointsJson)
         val polygonOptions = deserializePolygonOptions(polygonOptionsJson)
-        return OstZone(points, polygonOptions, "The Circle").apply {
+        return OstZone(points, polygonOptions, name).apply {
             id = cursor.getLong(cursor.getColumnIndex(KEY_ID))
         }
     }
@@ -141,11 +151,5 @@ class DatabaseHelper(context: Context) :
             polygonOptions[key] = jsonObject[key]
         }
         return polygonOptions
-    }
-
-    fun clearAllData() {
-        val db = this.writableDatabase
-        db.delete(TABLE_NAME, null, null)
-        db.close()
     }
 }

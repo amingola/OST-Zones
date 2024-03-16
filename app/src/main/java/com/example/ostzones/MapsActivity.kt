@@ -70,6 +70,24 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         initEditZoneName()
     }
 
+    private fun initOstZoneRecyclerView() {
+        val listAdapter = OstZoneListAdapter(this, ostZones)
+        listAdapter.onItemClick = { ostZone ->
+            googleMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    Utilities.computeCentroidOfSelectedPolygon(ostZone.polygonPoints), 20.0f
+                )
+            )
+            val selectedPolygon = ostZones.filter { entry -> entry.value == ostZone }.keys.first()
+            onPolygonClick(selectedPolygon)
+        }
+        ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
+        ostZonesRecyclerView.also {
+            it.adapter = listAdapter
+            it.layoutManager = LinearLayoutManager(this)
+        }
+    }
+
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
         googleMap.setOnMapClickListener { tappedPoint -> handleMapTap(tappedPoint) }
@@ -148,20 +166,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     fun zonesNavClick(item: MenuItem) {
-        val listAdapter = OstZoneListAdapter(this, ostZones)
-        listAdapter.onItemClick = { ostZone ->
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                Utilities.computeCentroidOfSelectedPolygon(ostZone.polygonPoints), 20.0f)
-            )
-            val selectedPolygon = ostZones.filter { entry -> entry.value == ostZone }.keys.first()
-            onPolygonClick(selectedPolygon)
-        }
-        ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
-        ostZonesRecyclerView.also{
-            it.adapter = listAdapter
-            it.layoutManager = LinearLayoutManager(this)
-        }
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        showBottomSheetPlaceholder()
     }
 
     fun ostsNavClick(item: MenuItem) {
@@ -196,7 +202,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //Create a new OST Zone
         if(existingOstZone == null) {
             val ostZone = databaseHelper.saveOstZone(
-                OstZone(points, polygonOptions, "The Circle")
+                OstZone(points, polygonOptions, "")
             )
             ostZones[polygon] = ostZone
 
@@ -212,6 +218,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             removeSelectedZoneFromMap()
         }
         resetDrawing()
+        onPolygonClick(polygon)
     }
 
     private fun loadOstZoneToMap(ostZone: OstZone){
@@ -287,6 +294,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         for(ostZone in databaseHelper.getAllOstZones()){
             loadOstZoneToMap(ostZone)
         }
+        initOstZoneRecyclerView()
     }
 
     private fun initBottomSheet() {
