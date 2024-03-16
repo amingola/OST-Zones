@@ -99,7 +99,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
             LatLng(41.712752765580035,-73.75673331320286), 20.0f))
 
+        //ostZones can't be loaded in onCreate(), because the keys are each of their polygons
+        //(which can't be saved as a property because they can't be serialized) and they can't be
+        //created until the map is available...
         loadSavedOstZones()
+        initOstZoneRecyclerView()
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -294,7 +298,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         for(ostZone in databaseHelper.getAllOstZones()){
             loadOstZoneToMap(ostZone)
         }
-        initOstZoneRecyclerView()
     }
 
     private fun initBottomSheet() {
