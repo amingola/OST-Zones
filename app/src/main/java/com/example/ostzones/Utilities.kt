@@ -33,12 +33,15 @@ object Utilities {
         }
     }
 
-    fun getCentroidPointOfSelectedPolygon(selectedPolygon: Polygon): LatLng {
-        return selectedPolygon.points.run {
+    fun computeCentroidOfSelectedPolygon(selectedPolygon: Polygon): LatLng {
+        return computeCentroidOfSelectedPolygon(selectedPolygon.points)
+    }
+
+    fun computeCentroidOfSelectedPolygon(points: List<LatLng>): LatLng {
+        return points.run {
             val totalLatitude = sumOf { it.latitude }
             val totalLongitude = sumOf { it.longitude }
             LatLng(totalLatitude/size, totalLongitude/size)
         }
     }
-
 }

@@ -1,16 +1,23 @@
 package com.example.ostzones
 
 import DatabaseHelper
+import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -27,7 +34,7 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
-    OnMarkerDragListener, OnPolygonClickListener{
+    OnMarkerDragListener, OnPolygonClickListener {
 
     private val ostZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markers: ArrayList<Marker> = arrayListOf()
@@ -47,6 +54,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private lateinit var binding: ActivityMapsBinding
     private lateinit var bottomSheet: View
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+    private lateinit var zoneNameEditText: EditText
+    private lateinit var ostZonesRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,9 +66,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        bottomSheet = findViewById<LinearLayout>(R.id.bottom_sheet)
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+        initBottomSheet()
+        initEditZoneName()
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -110,7 +118,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         val ostZone = ostZones[polygon]
         Log.d("polygon", "just clicked a polygon named: " + ostZone?.name)
 
-        if(ostZone != null) (findViewById<TextView>(R.id.zoneName)).text = ostZone.name
+        if(ostZone != null) zoneNameEditText.setText(ostZone.name)
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
         showBottomSheetEditFunctionality()
     }
@@ -131,7 +139,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                 drawMarkerOnMap(point)
             }
 
-            val centroidPoint = Utilities.getCentroidPointOfSelectedPolygon(selectedPolygon!!)
+            val centroidPoint = Utilities.computeCentroidOfSelectedPolygon(selectedPolygon!!)
             val centroidMarkerOptions = Utilities.getCentroidMarkerOptions(centroidPoint, markers.isEmpty())
             centroidMarker = googleMap.addMarker(centroidMarkerOptions)
         }else{
@@ -140,6 +148,19 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     fun zonesNavClick(item: MenuItem) {
+        val listAdapter = OstZoneListAdapter(this, ostZones)
+        listAdapter.onItemClick = { ostZone ->
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                Utilities.computeCentroidOfSelectedPolygon(ostZone.polygonPoints), 20.0f)
+            )
+            val selectedPolygon = ostZones.filter { entry -> entry.value == ostZone }.keys.first()
+            onPolygonClick(selectedPolygon)
+        }
+        ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
+        ostZonesRecyclerView.also{
+            it.adapter = listAdapter
+            it.layoutManager = LinearLayoutManager(this)
+        }
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
@@ -216,7 +237,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun deselectZone(){
         selectedPolygon = null
         showBottomSheetPlaceholder()
-        (findViewById<TextView>(R.id.zoneName)).text = ""
+        (findViewById<TextView>(R.id.zone_name_edit_text)).text = ""
     }
 
     private fun resetDrawing() {
@@ -247,12 +268,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         selectedPolygon = null
 
         showBottomSheetPlaceholder()
-        (findViewById<TextView>(R.id.zoneName)).text = ""
+        (findViewById<TextView>(R.id.zone_name_edit_text)).text = ""
     }
 
     private fun showBottomSheetEditFunctionality() {
-        findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.VISIBLE
         findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.GONE
+        findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.VISIBLE
     }
 
     private fun showBottomSheetPlaceholder() {
@@ -263,12 +284,39 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun selectedZone() = ostZones[selectedPolygon]
 
     private fun loadSavedOstZones(){
-        //try{
-            for(ostZone in databaseHelper.getAllOstZones()){
-                loadOstZoneToMap(ostZone)
-            }
-        /*}catch (e: Exception){
-            Toast.makeText(this, "Failed to load saved OST Zones", Toast.LENGTH_SHORT).show()
-        }*/
+        for(ostZone in databaseHelper.getAllOstZones()){
+            loadOstZoneToMap(ostZone)
+        }
     }
+
+    private fun initBottomSheet() {
+        bottomSheet = findViewById<LinearLayout>(R.id.bottom_sheet)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+    }
+
+    private fun initEditZoneName() {
+        zoneNameEditText = findViewById(R.id.zone_name_edit_text)
+        zoneNameEditText.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE ||
+                event != null && event.action == KeyEvent.ACTION_DOWN &&
+                event.keyCode == KeyEvent.KEYCODE_ENTER
+            ) {
+                hideKeyboard(zoneNameEditText)
+                selectedZone()?.let {
+                    it.name = zoneNameEditText.text.toString()
+                    databaseHelper.updateOstZone(it)
+                }
+
+                return@setOnEditorActionListener true
+            }
+            false
+        }
+    }
+
+    private fun hideKeyboard(editText: EditText){
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(editText.windowToken, 0)
+    }
+
 }

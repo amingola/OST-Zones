@@ -265,14 +265,10 @@
     <string name="marker_collision_description">Demonstrates different supported marker collision behaviors.</string>
 
     <!-- Background Customization -->
-    <string name="background_color_customization_demo_label"
-        description="Title text of Background Color Customization demo for test.">Background Color Customization</string>
-    <string name="background_color_customization_demo_description"
-        description="Text displayed below the Background Color Customization demo title.">Demonstrates how to set a custom background color to a map.</string>
-    <string name="background_color_customization_programmatic_demo_label"
-        description="Title text of Background Color Customization - Programmatic demo for test.">Background Color Customization - Programmatic</string>
-    <string name="background_color_customization_programmatic_demo_description"
-        description="Text displayed below the Background Color Customization  - Programmatic demo title.">Demonstrates how to programmatically set a custom background color to a map.</string>
+    <string name="background_color_customization_demo_label" description="Title text of Background Color Customization demo for test.">Background Color Customization</string>
+    <string name="background_color_customization_demo_description" description="Text displayed below the Background Color Customization demo title.">Demonstrates how to set a custom background color to a map.</string>
+    <string name="background_color_customization_programmatic_demo_label" description="Title text of Background Color Customization - Programmatic demo for test.">Background Color Customization - Programmatic</string>
+    <string name="background_color_customization_programmatic_demo_description" description="Text displayed below the Background Color Customization  - Programmatic demo title.">Demonstrates how to programmatically set a custom background color to a map.</string>
     <string name="show_map_tiles">Show Map Tiles</string>
     <string name="delete_selected_zone">Delete Zone</string>
     <string name="zones">Zones</string>
@@ -284,4 +280,5 @@
     <string name="cancel_drawing_zone">Cancel Drawing Zone…</string>
     <string name="minimum_zone_points_warning">Zones must have at least 3 points</string>
     <string name="cancel_editing">Cancel Editing</string>
+    <string name="ost_zone_name_hint">Soundtrack Zone 1</string>
 </resources>
