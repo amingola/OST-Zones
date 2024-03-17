@@ -6,6 +6,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.PolygonOptions
+import java.lang.Math.toDegrees
+import java.lang.Math.toRadians
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -30,7 +32,7 @@ object Utilities {
         }
     }
 
-    fun getCentroidMarkerOptions(tappedPoint: LatLng, bFirstMarker: Boolean): MarkerOptions {
+    fun getCentroidMarkerOptions(tappedPoint: LatLng): MarkerOptions {
         return MarkerOptions().apply{
             position(tappedPoint)
             icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
@@ -39,10 +41,10 @@ object Utilities {
     }
 
     fun computeCentroidOfSelectedPolygon(selectedPolygon: Polygon): LatLng {
-        return computeCentroidOfSelectedPolygon(selectedPolygon.points)
+        return computeCentroidOfPoints(selectedPolygon.points)
     }
 
-    fun computeCentroidOfSelectedPolygon(points: List<LatLng>): LatLng {
+    fun computeCentroidOfPoints(points: List<LatLng>): LatLng {
         return points.run {
             val totalLatitude = sumOf { it.latitude }
             val totalLongitude = sumOf { it.longitude }
@@ -50,7 +52,7 @@ object Utilities {
         }
     }
 
-    fun calculateNewLatLng(originalLatLng: LatLng, startLatLng: LatLng, endLatLng: LatLng): LatLng {
+    /*fun calculateNewLatLng(originalLatLng: LatLng, startLatLng: LatLng, endLatLng: LatLng): LatLng {
         val distance = calculateDistance(startLatLng, endLatLng)
         val bearing = calculateBearing(startLatLng, endLatLng)
 
@@ -106,5 +108,51 @@ object Utilities {
 
         val bearing = atan2(y, x)
         return Math.toDegrees(bearing)
+    }*/
+
+    fun calculateNewPosition(centroidStartPosition: LatLng, centroidEndPosition: LatLng, positionToMove: LatLng): LatLng {
+        val distance = calculateDistance(centroidStartPosition, centroidEndPosition)
+        val bearing = calculateBearing(centroidStartPosition, centroidEndPosition)
+
+        val earthRadius = 6371000.0 //Earth's radius in meters
+
+        val origLat = toRadians(positionToMove.latitude)
+        val origLon = toRadians(positionToMove.longitude)
+        val angularDistance = distance / earthRadius
+        val trueCourse = toRadians(bearing.toDouble())
+
+        val newLat = asin(
+            sin(origLat) * cos(angularDistance) +
+                    cos(origLat) * sin(angularDistance) * cos(trueCourse)
+        )
+        val newLon = origLon + atan2(
+            sin(trueCourse) * sin(angularDistance) * cos(origLat),
+            cos(angularDistance) - sin(origLat) * sin(newLat)
+        )
+
+        return LatLng(toDegrees(newLat), toDegrees(newLon))
     }
+
+    private fun calculateDistance(startPosition: LatLng, endPosition: LatLng): Float {
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            startPosition.latitude, startPosition.longitude,
+            endPosition.latitude, endPosition.longitude,
+            results
+        )
+        return results[0]
+    }
+
+    private fun calculateBearing(startPosition: LatLng, endPosition: LatLng): Float {
+        val start = Location("Start")
+        start.latitude = startPosition.latitude
+        start.longitude = startPosition.longitude
+
+        val end = Location("End")
+        end.latitude = endPosition.latitude
+        end.longitude = endPosition.longitude
+
+        return start.bearingTo(end)
+    }
+
 }

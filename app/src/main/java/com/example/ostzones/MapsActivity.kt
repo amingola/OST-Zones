@@ -49,7 +49,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private var bDrawing = false
     private var bEditing = false
     private var selectedPolygon: Polygon? = null
-    private var tempPolyline: Polyline? = null
+    private var polylineForPolygonBeingEdited: Polyline? = null
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
 
@@ -78,7 +78,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         listAdapter.onItemClick = { ostZone ->
             googleMap.moveCamera(
                 CameraUpdateFactory.newLatLngZoom(
-                    Utilities.computeCentroidOfSelectedPolygon(ostZone.polygonPoints), 20.0f
+                    Utilities.computeCentroidOfPoints(ostZone.polygonPoints), 20.0f
                 )
             )
             val selectedPolygon = polygonsToOstZones.filter { entry -> entry.value == ostZone }.keys.first()
@@ -139,6 +139,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             translateSelectedPolygonWithCentroidMarker(marker)
         }
         redrawPolyline()
+        drawCentroidMarkerForPolylineToMap()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
@@ -169,9 +170,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                 drawMarkerOnMap(point)
             }
 
-            val centroidPoint = Utilities.computeCentroidOfSelectedPolygon(selectedPolygon!!)
-            val centroidMarkerOptions = Utilities.getCentroidMarkerOptions(centroidPoint, markersToMarkerOptions.isEmpty())
-            centroidMarker = googleMap.addMarker(centroidMarkerOptions)
+            drawCentroidMarkerForSelectedPolygonToMap()
         }else{
             resetDrawing()
         }
@@ -253,9 +252,23 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap.addMarker(markerOptions)?.let { markersToMarkerOptions[it] = markerOptions }
     }
 
+    private fun drawCentroidMarkerForSelectedPolygonToMap() {
+        centroidMarker?.remove()
+        val centroidPoint = Utilities.computeCentroidOfSelectedPolygon(selectedPolygon!!)
+        val centroidMarkerOptions = Utilities.getCentroidMarkerOptions(centroidPoint)
+        centroidMarker = googleMap.addMarker(centroidMarkerOptions)
+    }
+
+    private fun drawCentroidMarkerForPolylineToMap() {
+        centroidMarker?.remove()
+        val centroidPoint = Utilities.computeCentroidOfPoints(polylineForPolygonBeingEdited!!.points)
+        val centroidMarkerOptions = Utilities.getCentroidMarkerOptions(centroidPoint)
+        centroidMarker = googleMap.addMarker(centroidMarkerOptions)
+    }
+
     private fun redrawPolyline() {
-        tempPolyline?.remove()
-        tempPolyline = googleMap.addPolyline(PolylineOptions().apply {
+        polylineForPolygonBeingEdited?.remove()
+        polylineForPolygonBeingEdited = googleMap.addPolyline(PolylineOptions().apply {
             addAll(markersToMarkerOptions.map { entry -> entry.key.position })
         })
     }
@@ -270,8 +283,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         bDrawing = false
         bEditing = false
 
-        tempPolyline?.remove()
-        tempPolyline = null
+        polylineForPolygonBeingEdited?.remove()
+        polylineForPolygonBeingEdited = null
 
         for(m in markersToMarkerOptions) m.key.remove()
         markersToMarkerOptions.clear()
@@ -297,13 +310,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         zoneNameEditText.setText("")
     }
 
-    private fun translateSelectedPolygonWithCentroidMarker(marker: Marker) {
+    private fun translateSelectedPolygonWithCentroidMarker(centroidMarker: Marker) {
         val newMarkers: MutableMap<Marker, MarkerOptions> = mutableMapOf()
 
-        for (polygonMarker in markersToMarkerOptions.keys) {
-            val newPosition = Utilities.calculateNewLatLng(
-                polygonMarker.position, centroidMarkerStartPos!!, marker.position
-            )
+        for(polygonMarker in markersToMarkerOptions.keys){
+            val newPosition = Utilities.calculateNewPosition(centroidMarkerStartPos!!, centroidMarker.position, polygonMarker.position)
             val markerOptions = markersToMarkerOptions[polygonMarker]!!.position(newPosition)
             val newMarker = googleMap.addMarker(markerOptions)
 
