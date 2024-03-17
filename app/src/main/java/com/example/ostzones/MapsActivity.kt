@@ -35,7 +35,7 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
-    OnMarkerDragListener, OnPolygonClickListener {
+    OnMarkerDragListener, OnPolygonClickListener{
 
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markersToMarkerOptions: MutableMap<Marker, MarkerOptions> = mutableMapOf()
@@ -81,7 +81,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                     Utilities.computeCentroidOfPoints(ostZone.polygonPoints), 20.0f
                 )
             )
-            val selectedPolygon = polygonsToOstZones.filter { entry -> entry.value == ostZone }.keys.first()
+            val selectedPolygon = polygonsToOstZones.filterValues { it == ostZone }.keys.first()
             onPolygonClick(selectedPolygon)
         }
         ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
