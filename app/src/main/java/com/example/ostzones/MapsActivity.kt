@@ -31,7 +31,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
-import com.google.android.gms.maps.model.PolygonOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -190,7 +189,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
     }
 
-    fun updateSelectedPolygonColor() {
+    fun updateSelectedPolygonColorOnMap() {
         val alpha = ostZoneColorAlphaSeekBar.progress
         val red = ostZoneColorRedSeekBar.progress
         val green = ostZoneColorGreenSeekBar.progress
@@ -201,8 +200,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         selectedZone()?.let {
             it.polygonOptions["fillColor"] = color
-            updateOstZone(it)
         }
+    }
+
+    fun updateSelectedPolygonColorInDatabase(){
+        selectedZone()?.let { updateOstZone(it) }
     }
 
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]

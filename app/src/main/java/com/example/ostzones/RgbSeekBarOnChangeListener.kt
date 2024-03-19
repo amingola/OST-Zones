@@ -14,11 +14,13 @@ open class RgbSeekBarOnChangeListener(
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
         label.text = progress.toString()
-        mapsActivity.updateSelectedPolygonColor()
+        mapsActivity.updateSelectedPolygonColorOnMap()
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar?) {}
 
-    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+        mapsActivity.updateSelectedPolygonColorInDatabase()
+    }
 
 }
