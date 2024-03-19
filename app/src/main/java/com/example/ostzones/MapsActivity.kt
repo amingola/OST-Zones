@@ -190,6 +190,21 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
     }
 
+    fun updateSelectedPolygonColor() {
+        val alpha = ostZoneColorAlphaSeekBar.progress
+        val red = ostZoneColorRedSeekBar.progress
+        val green = ostZoneColorGreenSeekBar.progress
+        val blue = ostZoneColorBlueSeekBar.progress
+        val color = Color.argb(alpha, red, green, blue)
+
+        selectedPolygon?.fillColor = color
+
+        selectedZone()?.let {
+            it.polygonOptions["fillColor"] = color
+            updateOstZone(it)
+        }
+    }
+
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]
 
     private fun handleMapTap(tappedPoint: LatLng) {
@@ -224,6 +239,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
             removeSelectedZoneFromMap()
         }
+
         initOstZoneRecyclerView()
         resetDrawing()
         onPolygonClick(polygon)
@@ -434,13 +450,5 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun hideKeyboard(editText: EditText){
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
-    }
-
-    fun updateSelectedPolygonColor() {
-        val alpha = ostZoneColorAlphaSeekBar.progress
-        val red = ostZoneColorRedSeekBar.progress
-        val green = ostZoneColorGreenSeekBar.progress
-        val blue = ostZoneColorBlueSeekBar.progress
-        selectedPolygon?.fillColor = Color.argb(alpha, red, green, blue)
     }
 }
