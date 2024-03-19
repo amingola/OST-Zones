@@ -46,6 +46,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         "strokeColor" to Color.BLACK,
         "clickable" to true
     )
+    private val fillColorKey = "fillColor"
 
     private var bDrawing = false
     private var bEditing = false
@@ -199,7 +200,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         selectedPolygon?.fillColor = color
 
         selectedZone()?.let {
-            it.polygonOptions["fillColor"] = color
+            it.polygonOptions[fillColorKey] = color
         }
     }
 
@@ -428,7 +429,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun updatePolygonArgbComponents() {
         selectedZone()?.let {
-            val color = it.polygonOptions["fillColor"] as Int
+            val color = it.polygonOptions[fillColorKey] as Int
 
             val red = Utilities.getColorComponentDecimalValue(color, SeekBarColor.RED)
             val green = Utilities.getColorComponentDecimalValue(color, SeekBarColor.GREEN)
