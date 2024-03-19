@@ -1,10 +1,10 @@
 package com.example.ostzones
 
 import DatabaseHelper
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -13,6 +13,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
+import com.google.android.gms.maps.model.PolygonOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -59,6 +61,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var zoneNameEditText: EditText
     private lateinit var ostZonesRecyclerView: RecyclerView
+    private lateinit var ostZoneColorRedSeekBarLabel: TextView
+    private lateinit var ostZoneColorGreenSeekBarLabel: TextView
+    private lateinit var ostZoneColorBlueSeekBarLabel: TextView
+    private lateinit var ostZoneColorAlphaSeekBarLabel: TextView
+    private lateinit var ostZoneColorRedSeekBar: SeekBar
+    private lateinit var ostZoneColorGreenSeekBar: SeekBar
+    private lateinit var ostZoneColorBlueSeekBar: SeekBar
+    private lateinit var ostZoneColorAlphaSeekBar: SeekBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,24 +81,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         initBottomSheet()
         initEditZoneName()
-    }
-
-    private fun initOstZoneRecyclerView() {
-        val listAdapter = OstZoneListAdapter(this, polygonsToOstZones)
-        listAdapter.onItemClick = { ostZone ->
-            googleMap.moveCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    Utilities.computeCentroidOfPoints(ostZone.polygonPoints), 20.0f
-                )
-            )
-            val selectedPolygon = polygonsToOstZones.filterValues { it == ostZone }.keys.first()
-            onPolygonClick(selectedPolygon)
-        }
-        ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
-        ostZonesRecyclerView.also {
-            it.adapter = listAdapter
-            it.layoutManager = LinearLayoutManager(this)
-        }
+        initOstZoneColorSliders()
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -147,11 +140,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         selectedPolygon = polygon
         val ostZone = polygonsToOstZones[polygon]
-        Log.d("polygon", "just clicked a polygon named: " + ostZone?.name)
 
         if(ostZone != null) zoneNameEditText.setText(ostZone.name)
+
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
         showBottomSheetEditFunctionality()
+        updatePolygonArgbComponents()
     }
 
     fun deleteSelectedZoneClick(view: View) {
@@ -195,6 +189,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             resetDrawing()
         }
     }
+
+    private fun selectedZone() = polygonsToOstZones[selectedPolygon]
 
     private fun handleMapTap(tappedPoint: LatLng) {
         if(selectedPolygon != null && !bEditing){
@@ -326,6 +322,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         markersToMarkerOptions.putAll(newMarkers)
     }
 
+    private fun loadSavedOstZones(){
+        for(ostZone in databaseHelper.getAllOstZones()){
+            loadOstZoneToMap(ostZone)
+        }
+    }
+
     private fun showBottomSheetEditFunctionality() {
         findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.GONE
         findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.VISIBLE
@@ -336,14 +338,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.VISIBLE
     }
 
-    private fun selectedZone() = polygonsToOstZones[selectedPolygon]
-
-    private fun loadSavedOstZones(){
-        for(ostZone in databaseHelper.getAllOstZones()){
-            loadOstZoneToMap(ostZone)
-        }
-    }
-
+    @SuppressLint("ClickableViewAccessibility")
     private fun initBottomSheet() {
         bottomSheet = findViewById<LinearLayout>(R.id.bottom_sheet)
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
@@ -370,9 +365,82 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
     }
 
+    private fun initOstZoneColorSliders() {
+        ostZoneColorRedSeekBarLabel = findViewById(R.id.polygon_options_slider_progress_label_red)
+        ostZoneColorGreenSeekBarLabel = findViewById(R.id.polygon_options_slider_progress_label_green)
+        ostZoneColorBlueSeekBarLabel = findViewById(R.id.polygon_options_slider_progress_label_blue)
+        ostZoneColorAlphaSeekBarLabel = findViewById(R.id.polygon_options_slider_progress_label_alpha)
+
+        ostZoneColorRedSeekBar = findViewById(R.id.polygon_options_slider_red)
+        ostZoneColorGreenSeekBar = findViewById(R.id.polygon_options_slider_green)
+        ostZoneColorBlueSeekBar = findViewById(R.id.polygon_options_slider_blue)
+        ostZoneColorAlphaSeekBar = findViewById(R.id.polygon_options_slider_alpha)
+
+        ostZoneColorRedSeekBar.setOnSeekBarChangeListener(
+            RgbSeekBarOnChangeListener(this, ostZoneColorRedSeekBarLabel)
+        )
+        ostZoneColorGreenSeekBar.setOnSeekBarChangeListener(
+            RgbSeekBarOnChangeListener(this, ostZoneColorGreenSeekBarLabel)
+        )
+        ostZoneColorBlueSeekBar.setOnSeekBarChangeListener(
+            RgbSeekBarOnChangeListener(this, ostZoneColorBlueSeekBarLabel)
+        )
+        ostZoneColorAlphaSeekBar.setOnSeekBarChangeListener(
+            RgbSeekBarOnChangeListener(this, ostZoneColorAlphaSeekBarLabel)
+        )
+    }
+
+    private fun initOstZoneRecyclerView() {
+        val listAdapter = OstZoneListAdapter(this, polygonsToOstZones)
+        listAdapter.onItemClick = { ostZone ->
+            googleMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    Utilities.computeCentroidOfPoints(ostZone.polygonPoints), 20.0f
+                )
+            )
+            val selectedPolygon = polygonsToOstZones.filterValues { it == ostZone }.keys.first()
+            onPolygonClick(selectedPolygon)
+        }
+        ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
+        ostZonesRecyclerView.also {
+            it.adapter = listAdapter
+            it.layoutManager = LinearLayoutManager(this)
+        }
+    }
+
+    private fun updatePolygonArgbComponents() {
+        selectedZone()?.let {
+            val color = it.polygonOptions["fillColor"] as Int
+
+            val red = Utilities.getColorComponentDecimalValue(color, SeekBarColor.RED)
+            val green = Utilities.getColorComponentDecimalValue(color, SeekBarColor.GREEN)
+            val blue = Utilities.getColorComponentDecimalValue(color, SeekBarColor.BLUE)
+            val alpha = Utilities.getColorComponentDecimalValue(color, SeekBarColor.ALPHA)
+
+            ostZoneColorRedSeekBarLabel.text = red.toString()
+            ostZoneColorRedSeekBar.progress = red
+
+            ostZoneColorGreenSeekBarLabel.text = green.toString()
+            ostZoneColorGreenSeekBar.progress = green
+
+            ostZoneColorBlueSeekBarLabel.text = blue.toString()
+            ostZoneColorBlueSeekBar.progress = blue
+
+            ostZoneColorAlphaSeekBarLabel.text = alpha.toString()
+            ostZoneColorAlphaSeekBar.progress = alpha
+        }
+    }
+
     private fun hideKeyboard(editText: EditText){
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
     }
 
+    fun updateSelectedPolygonColor() {
+        val alpha = ostZoneColorAlphaSeekBar.progress
+        val red = ostZoneColorRedSeekBar.progress
+        val green = ostZoneColorGreenSeekBar.progress
+        val blue = ostZoneColorBlueSeekBar.progress
+        selectedPolygon?.fillColor = Color.argb(alpha, red, green, blue)
+    }
 }
