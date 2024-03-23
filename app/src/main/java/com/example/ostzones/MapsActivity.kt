@@ -1,7 +1,8 @@
 package com.example.ostzones
 
 import DatabaseHelper
-import android.Manifest
+import android.Manifest.permission.ACCESS_COARSE_LOCATION
+import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
@@ -42,6 +43,9 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
+private const val FILL_COLOR_KEY = "fillColor"
+private const val LOCATION_PERMISSION_REQUEST_CODE = 1
+
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
     OnMarkerDragListener, OnPolygonClickListener,
     GoogleMap.OnMyLocationButtonClickListener,
@@ -56,7 +60,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         "strokeColor" to Color.BLACK,
         "clickable" to true
     )
-    private val fillColorKey = "fillColor"
 
     private var bDrawing = false
     private var bEditing = false
@@ -65,8 +68,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
 
-    private lateinit var googleMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private lateinit var googleMap: GoogleMap
+    private lateinit var locationManager: LocationManager
     private lateinit var bottomSheet: View
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var zoneNameEditText: EditText
@@ -102,11 +106,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap.setOnPolygonClickListener(this)
         googleMap.setOnMyLocationButtonClickListener(this)
         googleMap.setOnMyLocationClickListener(this)
-        enableMyLocation()
 
-        //TODO move camera to user's location
-        /*googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-            LatLng(41.712752765580035,-73.75673331320286), 20f))*/
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        enableMyLocation()
+        centerMapOnUserLocation()
 
         //ostZones can't be loaded in onCreate(), because the keys are each of their polygons
         //(which can't be saved as a property because they can't be serialized) and they can't be
@@ -115,65 +118,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         initOstZoneRecyclerView()
     }
 
-    private fun enableMyLocation() {
-
-        // Set OnClickListener for the centerLocationButton
-        findViewById<FloatingActionButton>(R.id.centerLocationButton).setOnClickListener {
-            //Center the map on the user's current location
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                if (location != null) {
-                    val userLatLng = LatLng(location.latitude, location.longitude)
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 20f))
-                }
-            }
-        }
-
-        //1. Check if permissions are granted, if so, enable the my location layer
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            googleMap.isMyLocationEnabled = true
-            return
-        }
-
-        //2. If a permission rationale dialog should be shown
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.ACCESS_FINE_LOCATION)
-            || ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            //TODO
-            /*PermissionUtils.RationaleDialog.newInstance(
-                LOCATION_PERMISSION_REQUEST_CODE, true
-            ).show(supportFragmentManager, "dialog")*/
-            return
-        }
-
-        //3. Otherwise, request permission
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ),
-            LOCATION_PERMISSION_REQUEST_CODE
-        )
-    }
-
     override fun onMyLocationButtonClick(): Boolean {
         Toast.makeText(this, "MyLocation button clicked", Toast.LENGTH_SHORT)
             .show()
-        // Return false so that we don't consume the event and the default behavior still occurs
-        // (the camera animates to the user's current position).
-        return false
+        return false //Return false to not consume the event/animate to the user's current position
     }
 
-    override fun onMyLocationClick(location: Location) {
-        Toast.makeText(this, "Current location:\n$location", Toast.LENGTH_LONG)
-            .show()
-    }
+    override fun onMyLocationClick(location: Location) =
+        Toast.makeText(this, "Current location:\n$location", Toast.LENGTH_LONG).show()
 
     override fun onMarkerClick(marker: Marker): Boolean {
         //Only create the OstZone on clicking the first marker, only the first marker is full opacity
@@ -273,12 +225,51 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         selectedPolygon?.fillColor = color
 
         selectedZone()?.let {
-            it.polygonOptions[fillColorKey] = color
+            it.polygonOptions[FILL_COLOR_KEY] = color
         }
     }
 
     fun updateSelectedPolygonColorInDatabase(){
         selectedZone()?.let { updateOstZone(it) }
+    }
+
+    @SuppressLint("MissingPermission") //Lint is wrong; this is handled in a private function call!
+    private fun enableMyLocation() {
+        findViewById<FloatingActionButton>(R.id.centerLocationButton).setOnClickListener {
+            centerMapOnUserLocation()
+        }
+
+        if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
+            googleMap.isMyLocationEnabled = true
+            googleMap.uiSettings.isMyLocationButtonEnabled = false
+            return
+        }
+
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION),
+            LOCATION_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    private fun hasCoarseLocationPermission() =
+        ContextCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasFineLocationPermission() =
+        ContextCompat.checkSelfPermission(
+            this,
+            ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+    @SuppressLint("MissingPermission") //Lint is wrong; this is handled in a private function call!
+    private fun centerMapOnUserLocation() {
+        if (hasFineLocationPermission()) {
+            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            if (location != null) {
+                val userLatLng = LatLng(location.latitude, location.longitude)
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 18f))
+            }
+        }
     }
 
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]
@@ -502,7 +493,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun updatePolygonArgbComponents() {
         selectedZone()?.let {
-            val color = it.polygonOptions[fillColorKey] as Int
+            val color = it.polygonOptions[FILL_COLOR_KEY] as Int
 
             val red = Utilities.getColorComponentDecimalValue(color, SeekBarColor.RED)
             val green = Utilities.getColorComponentDecimalValue(color, SeekBarColor.GREEN)
@@ -526,14 +517,5 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun hideKeyboard(editText: EditText){
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
-    }
-
-    companion object {
-        /**
-         * Request code for location permission request.
-         *
-         * @see .onRequestPermissionsResult
-         */
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1
     }
 }
