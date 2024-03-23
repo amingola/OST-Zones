@@ -1,9 +1,13 @@
 package com.example.ostzones
 
 import DatabaseHelper
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MenuItem
@@ -17,6 +21,8 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.databinding.ActivityMapsBinding
@@ -34,9 +40,13 @@ import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
-    OnMarkerDragListener, OnPolygonClickListener{
+    OnMarkerDragListener, OnPolygonClickListener,
+    GoogleMap.OnMyLocationButtonClickListener,
+    GoogleMap.OnMyLocationClickListener,
+    ActivityCompat.OnRequestPermissionsResultCallback {
 
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markersToMarkerOptions: MutableMap<Marker, MarkerOptions> = mutableMapOf()
@@ -90,16 +100,79 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         googleMap.setOnMarkerClickListener(this)
         googleMap.setOnMarkerDragListener(this)
         googleMap.setOnPolygonClickListener(this)
+        googleMap.setOnMyLocationButtonClickListener(this)
+        googleMap.setOnMyLocationClickListener(this)
+        enableMyLocation()
 
         //TODO move camera to user's location
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-            LatLng(41.712752765580035,-73.75673331320286), 20.0f))
+        /*googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+            LatLng(41.712752765580035,-73.75673331320286), 20f))*/
 
         //ostZones can't be loaded in onCreate(), because the keys are each of their polygons
         //(which can't be saved as a property because they can't be serialized) and they can't be
         //created until the map is available...
         loadSavedOstZones()
         initOstZoneRecyclerView()
+    }
+
+    private fun enableMyLocation() {
+
+        // Set OnClickListener for the centerLocationButton
+        findViewById<FloatingActionButton>(R.id.centerLocationButton).setOnClickListener {
+            //Center the map on the user's current location
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                if (location != null) {
+                    val userLatLng = LatLng(location.latitude, location.longitude)
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 20f))
+                }
+            }
+        }
+
+        //1. Check if permissions are granted, if so, enable the my location layer
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            googleMap.isMyLocationEnabled = true
+            return
+        }
+
+        //2. If a permission rationale dialog should be shown
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.ACCESS_FINE_LOCATION)
+            || ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            //TODO
+            /*PermissionUtils.RationaleDialog.newInstance(
+                LOCATION_PERMISSION_REQUEST_CODE, true
+            ).show(supportFragmentManager, "dialog")*/
+            return
+        }
+
+        //3. Otherwise, request permission
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ),
+            LOCATION_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    override fun onMyLocationButtonClick(): Boolean {
+        Toast.makeText(this, "MyLocation button clicked", Toast.LENGTH_SHORT)
+            .show()
+        // Return false so that we don't consume the event and the default behavior still occurs
+        // (the camera animates to the user's current position).
+        return false
+    }
+
+    override fun onMyLocationClick(location: Location) {
+        Toast.makeText(this, "Current location:\n$location", Toast.LENGTH_LONG)
+            .show()
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -453,5 +526,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun hideKeyboard(editText: EditText){
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
+    }
+
+    companion object {
+        /**
+         * Request code for location permission request.
+         *
+         * @see .onRequestPermissionsResult
+         */
+        private const val LOCATION_PERMISSION_REQUEST_CODE = 1
     }
 }

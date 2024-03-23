@@ -273,7 +273,7 @@
     <string name="delete_selected_zone">Delete Zone</string>
     <string name="zones">Zones</string>
     <string name="osts">OSTs</string>
-    <string name="edit_selected_zone">Edit Polygon</string>
+    <string name="edit_selected_zone">Edit Shape</string>
     <string name="saved_ost_zones_key">saved_ost_zones_key</string>
     <string name="cancel_drawing">Cancel Drawing</string>
     <string name="draw_new_zone">New Zone</string>
