@@ -29,19 +29,6 @@
             android:src="@android:drawable/ic_menu_mylocation"
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"/>
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/point_in_polygon_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignTop="@id/draw_new_zone_btn"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
-            android:src="@drawable/icon"
-            android:onClick="checkIfUserIsInPolygon"/>
-
         <Button
             android:id="@+id/draw_new_zone_btn"
             android:layout_width="wrap_content"
