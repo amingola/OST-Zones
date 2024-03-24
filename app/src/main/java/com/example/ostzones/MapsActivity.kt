@@ -10,6 +10,9 @@ import android.graphics.Color
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -42,8 +45,11 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
+private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
@@ -71,6 +77,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private lateinit var binding: ActivityMapsBinding
     private lateinit var googleMap: GoogleMap
     private lateinit var locationManager: LocationManager
+    private lateinit var scheduledExecutor: ScheduledExecutorService
+    private lateinit var handler: Handler
     private lateinit var bottomSheet: View
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var zoneNameEditText: EditText
@@ -92,6 +100,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
+        handler = Handler(Looper.getMainLooper())
+        startCheckWhenUserIsInOstZoneTask()
 
         initBottomSheet()
         initEditZoneName()
@@ -116,6 +128,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //created until the map is available...
         loadSavedOstZones()
         initOstZoneRecyclerView()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scheduledExecutor.shutdown()
+        handler.removeCallbacks(checkUserIsInOstZoneTask)
     }
 
     override fun onMyLocationButtonClick(): Boolean {
@@ -172,6 +190,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         showBottomSheetEditFunctionality()
         updatePolygonArgbComponents()
     }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+    }
+
+    fun hasCoarseLocationPermission() =
+        ContextCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    fun hasFineLocationPermission() =
+        ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     fun deleteSelectedZoneClick(view: View) {
         deleteSelectedZone()
@@ -233,11 +265,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         selectedZone()?.let { updateOstZone(it) }
     }
 
-    @SuppressLint("MissingPermission") //Lint is wrong; this is handled in a private function call!
+    private fun selectedZone() = polygonsToOstZones[selectedPolygon]
+
+    @SuppressLint("MissingPermission")
     private fun enableMyLocation() {
-        findViewById<FloatingActionButton>(R.id.centerLocationButton).setOnClickListener {
-            centerMapOnUserLocation()
-        }
+        val centerLocationButton = findViewById<FloatingActionButton>(R.id.center_location_btn)
+        centerLocationButton.setOnClickListener { centerMapOnUserLocation() }
 
         if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
             googleMap.isMyLocationEnabled = true
@@ -252,27 +285,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         )
     }
 
-    private fun hasCoarseLocationPermission() =
-        ContextCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-    private fun hasFineLocationPermission() =
-        ContextCompat.checkSelfPermission(
-            this,
-            ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-    @SuppressLint("MissingPermission") //Lint is wrong; this is handled in a private function call!
+    @SuppressLint("MissingPermission")
     private fun centerMapOnUserLocation() {
-        if (hasFineLocationPermission()) {
-            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            if (location != null) {
-                val userLatLng = LatLng(location.latitude, location.longitude)
-                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 18f))
+        if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
+            getUserLatLng()?.let {
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 18f))
             }
         }
     }
-
-    private fun selectedZone() = polygonsToOstZones[selectedPolygon]
 
     private fun handleMapTap(tappedPoint: LatLng) {
         if(selectedPolygon != null && !bEditing){
@@ -515,7 +535,35 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     private fun hideKeyboard(editText: EditText){
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(editText.windowToken, 0)
+        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.hideSoftInputFromWindow(editText.windowToken, 0)
+    }
+
+    private fun startCheckWhenUserIsInOstZoneTask() =
+        handler.postDelayed(checkUserIsInOstZoneTask, CHECK_LOCATION_TASK_FREQUENCY)
+
+    private val checkUserIsInOstZoneTask = checkUserIsInOstZoneTask()
+
+    private fun checkUserIsInOstZoneTask() = object : Runnable {
+        @SuppressLint("MissingPermission")
+        override fun run() {
+            if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
+                val name = getUserLatLng()?.let {
+                    polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
+                        .values.firstOrNull()?.name
+                }
+                if (name != null) {
+                    //TODO change playlist
+                    Log.d("location check", "User is inside $name")
+                }
+            }
+            handler.postDelayed(this, CHECK_LOCATION_TASK_FREQUENCY)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getUserLatLng(): LatLng? {
+        val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        return location?.let { LatLng(it.latitude, location.longitude) }
     }
 }

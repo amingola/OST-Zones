@@ -75,6 +75,10 @@ object Utilities {
         return LatLng(toDegrees(newLat), toDegrees(newLon))
     }
 
+    //Color values are saved as a signed int, e.g. -65536 = 0xFFFF0000
+    fun getColorComponentDecimalValue(colorValue: Int, color: SeekBarColor) =
+        String.format("%08x", colorValue).slice(color.intRange).toInt(radix = 16)
+
     private fun calculateDistance(startPosition: LatLng, endPosition: LatLng): Float {
         val results = FloatArray(1)
         Location.distanceBetween(
@@ -96,8 +100,4 @@ object Utilities {
 
         return start.bearingTo(end)
     }
-
-    //Color values are saved as a signed int, e.g. -65536 = 0xFFFF0000
-    fun getColorComponentDecimalValue(colorValue: Int, color: SeekBarColor) =
-        String.format("%08x", colorValue).slice(color.intRange).toInt(radix = 16)
 }
