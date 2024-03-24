@@ -63,7 +63,7 @@
         android:layout_height="wrap_content"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
         app:behavior_peekHeight="160dp"
-        app:behavior_halfExpandedRatio="0.5"
+        app:behavior_halfExpandedRatio="0.505"
         app:behavior_fitToContents="false"
         app:behavior_hideable="true"
         android:layout_gravity="fill"
@@ -135,11 +135,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <androidx.appcompat.widget.SwitchCompat
+                <!--<androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/switch1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Switch" />
+                    android:text="Switch" />-->
             </TableRow>
             <TableRow
                 android:layout_width="match_parent"

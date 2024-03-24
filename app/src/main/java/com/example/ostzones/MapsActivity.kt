@@ -50,6 +50,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L
+private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
@@ -289,7 +290,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun centerMapOnUserLocation() {
         if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
             getUserLatLng()?.let {
-                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 18f))
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM))
             }
         }
     }
@@ -496,12 +497,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun initOstZoneRecyclerView() {
         val listAdapter = OstZoneListAdapter(this, polygonsToOstZones)
         listAdapter.onItemClick = { ostZone ->
-            googleMap.moveCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    Utilities.computeCentroidOfPoints(ostZone.polygonPoints), 20.0f
-                )
-            )
+            val centroid = Utilities.computeCentroidOfPoints(ostZone.polygonPoints)
             val selectedPolygon = polygonsToOstZones.filterValues { it == ostZone }.keys.first()
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, DEFAULT_ZOOM))
             onPolygonClick(selectedPolygon)
         }
         ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
