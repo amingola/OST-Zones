@@ -7,6 +7,7 @@ import retrofit2.http.POST
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
 
 interface ApiService {
     @POST("/api/token")
@@ -19,4 +20,8 @@ interface ApiService {
 
     @POST("/dfjkghdk")
     fun getUserId(@Body requestBody: PlaylistRequestData): Call<PlaylistResponseData>
+
+    //https://api.spotify.com/v1/users/user123/playlists?limit=10&offset=0
+    @GET("/users/{userId}/playlists")
+    fun getUserPlaylists(@Field("userId") userId: String): Call<PlaylistResponseData>
 }

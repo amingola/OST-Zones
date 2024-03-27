@@ -21,6 +21,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        manifestPlaceholders.putIfAbsent("redirectHostName","callback")
+        manifestPlaceholders.putIfAbsent("redirectSchemeName", "ostzones")
+
         buildConfigField("String", "SPOTIFY_CLIENT_ID", getClientId())
         buildConfigField("String", "SPOTIFY_CLIENT_SECRET", getClientSecret())
     }
@@ -72,6 +76,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.spotify.android:auth:2.1.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.android.material:material:1.11.0")

@@ -1,7 +1,6 @@
 package com.example.ostzones.api
 
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ostzones.BuildConfig
 import com.example.ostzones.Utils
@@ -32,7 +31,7 @@ class AuthInterceptor(private val context: AppCompatActivity) : Interceptor {
         val requestBody = ClientCredentials(
             "client_credentials", BuildConfig.SPOTIFY_CLIENT_ID, BuildConfig.SPOTIFY_CLIENT_SECRET)
 
-        ApiServiceFactory.getApiService(context)
+        ApiServiceFactory.getAuthService(context)
             .getToken(requestBody.grantType, requestBody.clientId, requestBody.clientSecret)
             .enqueue(getTokenCallback(context))
     }

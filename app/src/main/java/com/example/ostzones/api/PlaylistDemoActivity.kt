@@ -1,20 +1,56 @@
 package com.example.ostzones.api
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ostzones.BuildConfig
 import com.example.ostzones.R
+import com.example.ostzones.Utils
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
+import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 
 class PlaylistDemoActivity : AppCompatActivity() {
-    private var playlists = mutableListOf<PlaylistResponseData>()
+    private val redirectUri = "ostzones://callback"
+    private val scopes = arrayOf(
+        "user-read-private",
+        "streaming",
+        "playlist-read-private",
+        "playlist-read-collaborative"
+    )
 
     private lateinit var playlistsRecyclerView: RecyclerView
+
+    private var playlists = mutableListOf<PlaylistResponseData>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playlist_demo)
+
+        val request = AuthorizationRequest.Builder(
+            BuildConfig.SPOTIFY_CLIENT_ID,
+            AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        ).setScopes(scopes).build()
+
+        AuthorizationClient.openLoginActivity(this, 1138, request)
         initPlaylistsRecyclerView()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE) {
+            val response = AuthorizationClient.getResponse(resultCode, data)
+            if (response.type == AuthorizationResponse.Type.TOKEN) {
+                Utils.toast(this, "got token ${response.accessToken}")
+            } else if (response.type == AuthorizationResponse.Type.ERROR) {
+                Utils.toast(this, "got error")
+            }
+        }
     }
 
     private fun initPlaylistsRecyclerView() {

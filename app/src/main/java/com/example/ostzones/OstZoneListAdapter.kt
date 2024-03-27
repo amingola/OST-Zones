@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.maps.model.Polygon
 
 class OstZoneListAdapter(private val context: Context,
-                         private val ostZones: HashMap<Polygon, OstZone>) :
+                         private val ostZones: HashMap<Polygon, OstZone>):
     RecyclerView.Adapter<OstZoneListAdapter.ViewHolder>() {
 
     var onItemClick: ((OstZone) -> Unit)? = null
