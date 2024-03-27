@@ -1,12 +1,12 @@
 <!-- custom_item_layout.xml -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/ost_zone_list_item_layout"
+    android:id="@+id/playlist_list_item_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/ostZoneNameTextView"
+        android:id="@+id/playlistNameTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="32sp"/>

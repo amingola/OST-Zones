@@ -1,6 +1,8 @@
 package com.example.ostzones
 
 import android.location.Location
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
@@ -13,7 +15,12 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-object Utilities {
+object Utils {
+
+    //Helper function to shorten the line length of Toast calls
+    fun toast(context: AppCompatActivity, msg: String){
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    }
 
     fun createPolygonOptions(points: List<LatLng>, polygonOptions: HashMap<String, Any>): PolygonOptions {
         return PolygonOptions().apply {
@@ -100,4 +107,5 @@ object Utilities {
 
         return start.bearingTo(end)
     }
+
 }
