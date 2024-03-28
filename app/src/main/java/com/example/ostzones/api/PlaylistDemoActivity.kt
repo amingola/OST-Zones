@@ -13,7 +13,10 @@ import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 
+const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
+
 class PlaylistDemoActivity : AppCompatActivity() {
+
     private val redirectUri = "ostzones://callback"
     private val scopes = arrayOf(
         "user-read-private",
@@ -23,6 +26,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
     )
 
     private lateinit var playlistsRecyclerView: RecyclerView
+    private lateinit var userId: String
 
     private var playlists = mutableListOf<PlaylistResponseData>()
 
@@ -36,7 +40,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
             redirectUri
         ).setScopes(scopes).build()
 
-        AuthorizationClient.openLoginActivity(this, 1138, request)
+        AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
         initPlaylistsRecyclerView()
     }
 
@@ -46,7 +50,9 @@ class PlaylistDemoActivity : AppCompatActivity() {
         if (requestCode == REQUEST_CODE) {
             val response = AuthorizationClient.getResponse(resultCode, data)
             if (response.type == AuthorizationResponse.Type.TOKEN) {
-                Utils.toast(this, "got token ${response.accessToken}")
+                val token = response.accessToken
+                ApiServiceFactory.getApiService(token)
+                Utils.toast(this, "got token $token")
             } else if (response.type == AuthorizationResponse.Type.ERROR) {
                 Utils.toast(this, "got error")
             }

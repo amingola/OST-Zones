@@ -13,10 +13,10 @@ object ApiServiceFactory {
     private var authService: ApiService? = null
     private var apiService: ApiService? = null
 
-    fun getAuthService(context: AppCompatActivity): ApiService {
+    fun getAuthService(): ApiService {
         synchronized(this) {
             if (authService == null) {
-                val client = getOkHttpClient(context)
+                val client = getOkHttpClient(null)
                 val retrofit = getRetrofit(client, SPOTIFY_AUTH_BASE_URL)
                 authService = retrofit.create(ApiService::class.java)
             }
@@ -24,10 +24,10 @@ object ApiServiceFactory {
         }
     }
 
-    fun getApiService(context: AppCompatActivity): ApiService {
+    fun getApiService(token: String): ApiService {
         synchronized(this) {
             if (apiService == null) {
-                val client = getOkHttpClient(context)
+                val client = getOkHttpClient(token)
                 val retrofit = getRetrofit(client, SPOTIFY_BASE_URL)
                 apiService = retrofit.create(ApiService::class.java)
             }
@@ -35,8 +35,8 @@ object ApiServiceFactory {
         }
     }
 
-    private fun getOkHttpClient(context: AppCompatActivity): OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(AuthInterceptor(context))
+    private fun getOkHttpClient(token: String?): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(AuthInterceptor(token))
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })

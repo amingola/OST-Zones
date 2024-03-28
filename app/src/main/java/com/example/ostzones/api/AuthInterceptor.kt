@@ -9,9 +9,11 @@ import okhttp3.Response
 import retrofit2.Call
 import retrofit2.Callback
 
-class AuthInterceptor(private val context: AppCompatActivity) : Interceptor {
+class AuthInterceptor(private val authToken: String?) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val request = chain.request()
+        val request = chain.request().newBuilder()
+            .addHeader("Authorization", "Bearer $authToken")
+            .build()
         val response = chain.proceed(request)
         if (response.code == 401) {
             handleMissingToken(response)
@@ -22,8 +24,6 @@ class AuthInterceptor(private val context: AppCompatActivity) : Interceptor {
     //401
     private fun handleMissingToken(response: Response) {
         Log.e("AuthInterceptor", "Unauthorized error: ${response.message}")
-        Utils.toast(context, "This would be the time to refresh the token")
-
         getToken()
     }
 
@@ -31,26 +31,25 @@ class AuthInterceptor(private val context: AppCompatActivity) : Interceptor {
         val requestBody = ClientCredentials(
             "client_credentials", BuildConfig.SPOTIFY_CLIENT_ID, BuildConfig.SPOTIFY_CLIENT_SECRET)
 
-        ApiServiceFactory.getAuthService(context)
+        ApiServiceFactory.getAuthService()
             .getToken(requestBody.grantType, requestBody.clientId, requestBody.clientSecret)
-            .enqueue(getTokenCallback(context))
+            .enqueue(getTokenCallback())
     }
 
-    private fun getTokenCallback(context: AppCompatActivity) = object :
+    private fun getTokenCallback() = object :
         Callback<TokenResponseData> {
         override fun onResponse(call: Call<TokenResponseData>, response: retrofit2.Response<TokenResponseData>){
             if (response.isSuccessful) {
                 val responseData = response.body()
                 val token = responseData?.accessToken
-                Utils.toast(context, "Token is: $token")
+                Log.d("AuthInterceptor", "Token is: $token")
             } else {
                 Log.e("Spotify API", "Error: ${response.code()}, ${response.errorBody()?.string()}")
-                Utils.toast(context, "Error: Unable to get Spotify API token")
             }
         }
 
         override fun onFailure(call: Call<TokenResponseData>, t: Throwable) {
-            Utils.toast(context, "FAILED: Unable to get Spotify API token")
+            Log.e("AuthInterceptor", "FAILED: Unable to get Spotify API token")
         }
     }
 

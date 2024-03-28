@@ -10,6 +10,9 @@ import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 
 interface ApiService {
+
+    var token: String
+
     @POST("/api/token")
     @FormUrlEncoded
     fun getToken(
@@ -18,7 +21,7 @@ interface ApiService {
         @Field("client_secret") clientSecret: String
     ): Call<TokenResponseData>
 
-    @POST("/dfjkghdk")
+    @POST("/me")
     fun getUserId(@Body requestBody: PlaylistRequestData): Call<PlaylistResponseData>
 
     //https://api.spotify.com/v1/users/user123/playlists?limit=10&offset=0
