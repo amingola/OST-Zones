@@ -1,9 +1,7 @@
 package com.example.ostzones.api
 
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
 import com.example.ostzones.BuildConfig
-import com.example.ostzones.Utils
 import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.Call
@@ -24,10 +22,7 @@ class AuthInterceptor(private val authToken: String?) : Interceptor {
     //401
     private fun handleMissingToken(response: Response) {
         Log.e("AuthInterceptor", "Unauthorized error: ${response.message}")
-        getToken()
-    }
 
-    private fun getToken(){
         val requestBody = ClientCredentials(
             "client_credentials", BuildConfig.SPOTIFY_CLIENT_ID, BuildConfig.SPOTIFY_CLIENT_SECRET)
 
@@ -44,7 +39,7 @@ class AuthInterceptor(private val authToken: String?) : Interceptor {
                 val token = responseData?.accessToken
                 Log.d("AuthInterceptor", "Token is: $token")
             } else {
-                Log.e("Spotify API", "Error: ${response.code()}, ${response.errorBody()?.string()}")
+                Log.e("AuthInterceptor", "Error: ${response.code()}, ${response.errorBody()?.string()}")
             }
         }
 

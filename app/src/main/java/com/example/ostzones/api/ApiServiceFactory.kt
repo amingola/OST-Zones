@@ -1,13 +1,12 @@
 package com.example.ostzones.api
 
-import androidx.appcompat.app.AppCompatActivity
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-const val SPOTIFY_AUTH_BASE_URL = "https://accounts.spotify.com/api/"
-const val SPOTIFY_BASE_URL = "https://api.spotify.com/v1/"
+const val SPOTIFY_AUTH_BASE_URL = "https://accounts.spotify.com"
+const val SPOTIFY_BASE_URL = "https://api.spotify.com"
 
 object ApiServiceFactory {
     private var authService: ApiService? = null

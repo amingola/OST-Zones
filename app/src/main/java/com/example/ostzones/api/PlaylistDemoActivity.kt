@@ -2,6 +2,7 @@ package com.example.ostzones.api
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,6 +13,8 @@ import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
+import retrofit2.Call
+import retrofit2.Callback
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
@@ -50,12 +53,36 @@ class PlaylistDemoActivity : AppCompatActivity() {
         if (requestCode == REQUEST_CODE) {
             val response = AuthorizationClient.getResponse(resultCode, data)
             if (response.type == AuthorizationResponse.Type.TOKEN) {
-                val token = response.accessToken
-                ApiServiceFactory.getApiService(token)
-                Utils.toast(this, "got token $token")
+                handleSuccessfulLogin(response)
             } else if (response.type == AuthorizationResponse.Type.ERROR) {
                 Utils.toast(this, "got error")
             }
+        }
+    }
+
+    private fun handleSuccessfulLogin(response: AuthorizationResponse) {
+        val token = response.accessToken
+        Utils.toast(this, "got token $token")
+
+        val apiService = ApiServiceFactory.getApiService(token)
+        apiService.getUserId().enqueue(getUserIdCallback())
+    }
+
+    //TODO make a factory for this
+    private fun getUserIdCallback() = object :
+        Callback<SpotifyUser> {
+        override fun onResponse(call: Call<SpotifyUser>, response: retrofit2.Response<SpotifyUser>){
+            if (response.isSuccessful) {
+                val responseData = response.body()
+                val userId = responseData?.id
+                Log.d("AuthInterceptor", "Token is: $userId")
+            } else {
+                Log.e("Playlists", "Error: ${response.code()}, ${response.errorBody()?.string()}")
+            }
+        }
+
+        override fun onFailure(call: Call<SpotifyUser>, t: Throwable) {
+            Log.e("Playlists", "FAILED: Unable to get Spotify user ID")
         }
     }
 

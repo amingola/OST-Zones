@@ -21,8 +21,8 @@ interface ApiService {
         @Field("client_secret") clientSecret: String
     ): Call<TokenResponseData>
 
-    @POST("/me")
-    fun getUserId(@Body requestBody: PlaylistRequestData): Call<PlaylistResponseData>
+    @GET("/v1/me")
+    fun getUserId(): Call<SpotifyUser>
 
     //https://api.spotify.com/v1/users/user123/playlists?limit=10&offset=0
     @GET("/users/{userId}/playlists")
