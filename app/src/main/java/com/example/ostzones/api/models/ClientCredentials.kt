@@ -1,4 +1,4 @@
-package com.example.ostzones.api
+package com.example.ostzones.api.models
 
 class ClientCredentials(
     val grantType: String,

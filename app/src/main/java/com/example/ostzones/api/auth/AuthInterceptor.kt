@@ -1,7 +1,9 @@
-package com.example.ostzones.api
+package com.example.ostzones.api.auth
 
 import android.util.Log
 import com.example.ostzones.BuildConfig
+import com.example.ostzones.api.models.ClientCredentials
+import com.example.ostzones.api.models.TokenResponse
 import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.Call
@@ -26,14 +28,14 @@ class AuthInterceptor(private val authToken: String?) : Interceptor {
         val requestBody = ClientCredentials(
             "client_credentials", BuildConfig.SPOTIFY_CLIENT_ID, BuildConfig.SPOTIFY_CLIENT_SECRET)
 
-        ApiServiceFactory.getAuthService()
+        AuthServiceFactory.getAuthService()
             .getToken(requestBody.grantType, requestBody.clientId, requestBody.clientSecret)
             .enqueue(getTokenCallback())
     }
 
     private fun getTokenCallback() = object :
-        Callback<TokenResponseData> {
-        override fun onResponse(call: Call<TokenResponseData>, response: retrofit2.Response<TokenResponseData>){
+        Callback<TokenResponse> {
+        override fun onResponse(call: Call<TokenResponse>, response: retrofit2.Response<TokenResponse>){
             if (response.isSuccessful) {
                 val responseData = response.body()
                 val token = responseData?.accessToken
@@ -43,7 +45,7 @@ class AuthInterceptor(private val authToken: String?) : Interceptor {
             }
         }
 
-        override fun onFailure(call: Call<TokenResponseData>, t: Throwable) {
+        override fun onFailure(call: Call<TokenResponse>, t: Throwable) {
             Log.e("AuthInterceptor", "FAILED: Unable to get Spotify API token")
         }
     }

@@ -7,12 +7,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.R
+import com.example.ostzones.api.models.Playlist
 
 class PlaylistListAdapter(private val context: Context,
-                          private val playlists: List<PlaylistResponseData>) :
+                          var playlists: List<Playlist>) :
     RecyclerView.Adapter<PlaylistListAdapter.ViewHolder>() {
 
-    var onItemClick: ((PlaylistResponseData) -> Unit)? = null
+    var onItemClick: ((Playlist) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.ost_zone_list_item_layout, parent, false)
@@ -39,8 +40,8 @@ class PlaylistListAdapter(private val context: Context,
             }
         }
 
-        fun bind(playlist: PlaylistResponseData) {
-            textViewName.text = playlist.key1
+        fun bind(playlist: Playlist) {
+            textViewName.text = playlist.name
 //            textViewDescription.text = ostZone.id.toString()
         }
     }
