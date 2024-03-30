@@ -11,6 +11,8 @@ import com.example.ostzones.BuildConfig
 import com.example.ostzones.R
 import com.example.ostzones.Utils
 import com.example.ostzones.api.models.Playlist
+import com.example.ostzones.api.models.PlaylistsResponse
+import com.example.ostzones.api.models.StartResumePlaybackRequest
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -18,6 +20,9 @@ import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
@@ -33,6 +38,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
         "playlist-read-collaborative"
     )
     private lateinit var playlistsRecyclerView: RecyclerView
+    private lateinit var apiService: ApiService
     private lateinit var userId: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +79,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
         val token = response.accessToken
         Utils.toast(this, "got token $token")
 
-        val apiService = ApiServiceFactory.getApiService(token)
+        apiService = ApiServiceFactory.getApiService(token)
 
         withContext(Dispatchers.IO) {
             userId = apiService.getUserId().id!!
@@ -83,15 +89,15 @@ class PlaylistDemoActivity : AppCompatActivity() {
             playlists = apiService.getUserPlaylists(userId).items
             Log.d("playlists", playlists.toString())
             runOnUiThread {
-                initPlaylistsRecyclerView()
+                initPlaylistsRecyclerView(apiService)
             }
         }
     }
 
-    private fun initPlaylistsRecyclerView() {
+    private fun initPlaylistsRecyclerView(apiService: ApiService) {
         val listAdapter = PlaylistListAdapter(this, playlists)
         listAdapter.onItemClick = { playlist: Playlist ->
-            println("${playlist.name} clicked")
+            onPlaylistClick(playlist, apiService)
         }
 
         playlistsRecyclerView = findViewById(R.id.playlists_recycler_view)
@@ -99,5 +105,26 @@ class PlaylistDemoActivity : AppCompatActivity() {
             it.adapter = listAdapter
             it.layoutManager = LinearLayoutManager(this)
         }
+    }
+
+    private fun onPlaylistClick(playlist: Playlist, apiService: ApiService) {
+        println("${playlist.name} clicked")
+        apiService.startPlayback(
+            StartResumePlaybackRequest(
+                "spotify:playlist:23LchstWQG96hKLgiNNpWI", null, null
+            )
+        ).enqueue(object : Callback<PlaylistsResponse> {
+            override fun onResponse(call: Call<PlaylistsResponse>, response: Response<PlaylistsResponse>) {
+                if (response.isSuccessful) {
+                    Utils.toast(this@PlaylistDemoActivity, "Playing Chrono Trigger :)")
+                } else {
+
+                }
+            }
+
+            override fun onFailure(call: Call<PlaylistsResponse>, t: Throwable) {
+
+            }
+        })
     }
 }
