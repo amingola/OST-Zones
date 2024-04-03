@@ -17,9 +17,13 @@ import kotlin.math.sin
 
 object Utils {
 
-    //Helper function to shorten the line length of Toast calls
+    //Helper functions to shorten the line length of Toast calls
     fun toast(context: AppCompatActivity, msg: String){
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    fun longToast(context: AppCompatActivity, msg: String){
+        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
     }
 
     fun createPolygonOptions(points: List<LatLng>, polygonOptions: HashMap<String, Any>): PolygonOptions {
