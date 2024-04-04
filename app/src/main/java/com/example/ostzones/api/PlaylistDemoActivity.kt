@@ -36,6 +36,7 @@ const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
 class PlaylistDemoActivity : AppCompatActivity() {
 
+    private val logTag = "PlaylistDemoActivity"
     private val redirectUri = "com.example.ostzones://login"
     private val scopes = arrayOf(
         "user-read-private",
@@ -70,25 +71,28 @@ class PlaylistDemoActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         if (requestCode == REQUEST_CODE) {
             val response = AuthorizationClient.getResponse(resultCode, data)
+
             if (response.type == AuthorizationResponse.Type.TOKEN) {
                 lifecycleScope.launch {
                     try {
                         handleSuccessfulLogin(response)
                     } catch (e: Exception) {
-                        //TODO Handle exceptions
+                        Log.e(logTag, e.message!!)
                     }
                 }
             } else if (response.type == AuthorizationResponse.Type.ERROR) {
                 Utils.longToast(this, response.error)
             }
+
         }
+
     }
 
     private suspend fun handleSuccessfulLogin(response: AuthorizationResponse) {
-
-        initializeSpotifyAppRemote(response.accessToken)
+        initializeSpotifyAppRemote()
 
         val token = response.accessToken
         apiService = ApiServiceFactory.getApiService(token)
@@ -99,17 +103,16 @@ class PlaylistDemoActivity : AppCompatActivity() {
 
         withContext(Dispatchers.IO) {
             playlists = apiService.getUserPlaylists(userId).items
-            Log.d("playlists", playlists.toString())
             runOnUiThread {
-                initPlaylistsRecyclerView(apiService)
+                initPlaylistsRecyclerView()
             }
         }
     }
 
-    private fun initPlaylistsRecyclerView(apiService: ApiService) {
+    private fun initPlaylistsRecyclerView() {
         val listAdapter = PlaylistListAdapter(this, playlists)
         listAdapter.onItemClick = { playlist: Playlist ->
-            onPlaylistClick(playlist, apiService)
+            spotifyAppRemote?.playerApi?.play(playlist.uri)
         }
 
         playlistsRecyclerView = findViewById(R.id.playlists_recycler_view)
@@ -119,28 +122,9 @@ class PlaylistDemoActivity : AppCompatActivity() {
         }
     }
 
-    private fun onPlaylistClick(playlist: Playlist, apiService: ApiService) {
-        spotifyAppRemote?.playerApi?.play(playlist.uri)
-        /*apiService.startPlayback(
-            StartResumePlaybackRequest(playlist.uri, null, null)
-        ).enqueue(object : Callback<PlaylistsResponse> {
-            override fun onResponse(call: Call<PlaylistsResponse>, response: Response<PlaylistsResponse>) {
-                if (response.isSuccessful) {
-                    Utils.toast(this@PlaylistDemoActivity, "Playing ${playlist.name}")
-                } else {
-
-                }
-            }
-            override fun onFailure(call: Call<PlaylistsResponse>, t: Throwable) {
-
-            }
-        })*/
-    }
-
-    private fun initializeSpotifyAppRemote(accessToken: String) {
+    private fun initializeSpotifyAppRemote() {
         val connectionParams = ConnectionParams.Builder(BuildConfig.SPOTIFY_CLIENT_ID)
             .setRedirectUri(redirectUri)
-//            .setAccessToken(accessToken)
             .showAuthView(true)
             .build()
 
@@ -148,26 +132,19 @@ class PlaylistDemoActivity : AppCompatActivity() {
             object : Connector.ConnectionListener {
                 override fun onConnected(spotifyAppRemote: SpotifyAppRemote) {
                     this@PlaylistDemoActivity.spotifyAppRemote = spotifyAppRemote
-                    Log.d("PlaylistDemoActivity", "Connected to Spotify")
-                    Utils.longToast(this@PlaylistDemoActivity, "Connected to Spotify")
+                    Log.d(logTag, "Connected to Spotify")
                 }
 
                 override fun onFailure(throwable: Throwable){
                     when (throwable) {
-                        is RemoteClientException -> {
-                            Log.e("PlaylistDemoActivity", throwable.message!!)
-                        }
-                        is UserNotAuthorizedException -> {
-                            Log.e("PlaylistDemoActivity", throwable.message!!)
-                        }
                         is CouldNotFindSpotifyApp -> {
-                            Log.e("PlaylistDemoActivity", throwable.message!!)
-                        }
-                        is AuthenticationFailedException -> {
-                            Log.e("PlaylistDemoActivity", throwable.message!!)
-                        }
-                        is SpotifyDisconnectedException -> {
-                            Log.e("PlaylistDemoActivity", throwable.message!!)
+                            Utils.longToast(this@PlaylistDemoActivity,
+                                "You must install spotify to play music from this device!")
+                            Log.e(logTag, throwable.message!!)
+                        }else ->{
+                            Utils.longToast(this@PlaylistDemoActivity,
+                                "Couldn't connect to Spotify. Relaunch the app, or open Spotify" +
+                                        " and play something to set this as the current device.")
                         }
                     }
                 }
