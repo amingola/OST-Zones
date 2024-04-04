@@ -11,8 +11,10 @@ import com.example.ostzones.BuildConfig
 import com.example.ostzones.R
 import com.example.ostzones.Utils
 import com.example.ostzones.api.models.Playlist
-import com.example.ostzones.api.models.PlaylistsResponse
-import com.example.ostzones.api.models.StartResumePlaybackRequest
+import com.spotify.android.appremote.api.ConnectionParams
+import com.spotify.android.appremote.api.Connector
+import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.android.appremote.api.error.CouldNotFindSpotifyApp
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -20,17 +22,6 @@ import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import com.spotify.android.appremote.api.ConnectionParams
-import com.spotify.android.appremote.api.Connector
-import com.spotify.android.appremote.api.SpotifyAppRemote
-import com.spotify.android.appremote.api.error.AuthenticationFailedException
-import com.spotify.android.appremote.api.error.CouldNotFindSpotifyApp
-import com.spotify.android.appremote.api.error.SpotifyDisconnectedException
-import com.spotify.android.appremote.api.error.UserNotAuthorizedException
-import com.spotify.protocol.client.error.RemoteClientException
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 

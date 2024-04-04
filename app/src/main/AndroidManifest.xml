@@ -19,8 +19,6 @@
             android:name=".api.PlaylistDemoActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
                 <data
                     android:host="callback"
                     android:scheme="ostzones" />
@@ -40,7 +38,6 @@
             android:theme="@style/Theme.AppCompat.Light">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
