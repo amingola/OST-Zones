@@ -19,28 +19,29 @@
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="fill_vertical"
-            />
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/center_location_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            android:src="@android:drawable/ic_menu_mylocation"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentTop="true"/>
+            android:layout_gravity="fill_vertical"/>
         <Button
             android:id="@+id/draw_new_zone_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignStart="@id/map"
+            android:layout_alignEnd="@id/map"
             android:layout_alignTop="@id/map"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
             android:onClick="toggleDrawingNewZoneClick"
-            android:text="@string/draw_new_zone" />
+            android:text="@string/draw_new_zone"/>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/center_location_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/draw_new_zone_btn"
+            android:layout_alignEnd="@id/map"
+            android:layout_marginTop="60dp"
+            android:layout_marginEnd="16dp"
+            android:src="@android:drawable/ic_menu_mylocation" />
     </RelativeLayout>
 
     <!--The Tray-->
@@ -230,14 +231,5 @@
         app:layout_constraintLeft_toLeftOf="parent"
         android:layout_gravity="bottom"
         app:menu="@menu/bottom_navigation_menu"/>
-
-    <!--<Button
-        android:id="@+id/startActivityButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:foregroundGravity="top|right"
-        android:text="@string/cancel_drawing"
-        app:layout_anchor="@+id/relativeLayout"
-        app:layout_anchorGravity="end|top"/>-->
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
