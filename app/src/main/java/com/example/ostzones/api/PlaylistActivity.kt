@@ -3,6 +3,8 @@ package com.example.ostzones.api
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,7 +27,7 @@ import kotlinx.coroutines.withContext
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
-class PlaylistDemoActivity : AppCompatActivity() {
+class PlaylistActivity : AppCompatActivity() {
 
     private val logTag = "PlaylistDemoActivity"
     private val redirectUri = "com.example.ostzones://login"
@@ -46,7 +48,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_playlist_demo)
+        setContentView(R.layout.activity_playlist)
 
         //TODO save auth details and only do auth stuff if it's null
 
@@ -57,6 +59,11 @@ class PlaylistDemoActivity : AppCompatActivity() {
         ).setScopes(scopes).build()
 
         AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_playlists, menu)
+        return true
     }
 
     @Deprecated("Deprecated in Java")
@@ -122,18 +129,18 @@ class PlaylistDemoActivity : AppCompatActivity() {
         SpotifyAppRemote.connect(this, connectionParams,
             object : Connector.ConnectionListener {
                 override fun onConnected(spotifyAppRemote: SpotifyAppRemote) {
-                    this@PlaylistDemoActivity.spotifyAppRemote = spotifyAppRemote
+                    this@PlaylistActivity.spotifyAppRemote = spotifyAppRemote
                     Log.d(logTag, "Connected to Spotify")
                 }
 
                 override fun onFailure(throwable: Throwable){
                     when (throwable) {
                         is CouldNotFindSpotifyApp -> {
-                            Utils.longToast(this@PlaylistDemoActivity,
+                            Utils.longToast(this@PlaylistActivity,
                                 "You must install spotify to play music from this device!")
                             Log.e(logTag, throwable.message!!)
                         }else ->{
-                            Utils.longToast(this@PlaylistDemoActivity,
+                            Utils.longToast(this@PlaylistActivity,
                                 "Couldn't connect to Spotify. Relaunch the app, or open Spotify" +
                                         " and play something to set this as the current device.")
                         }
@@ -141,5 +148,10 @@ class PlaylistDemoActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    fun onSaveButtonClick(view: View) {
+        val str = playlists.filter { p -> p.isChecked }.joinToString(", ") { p -> p.name }
+        Utils.toast(this, str)
     }
 }

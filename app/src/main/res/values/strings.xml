@@ -284,4 +284,6 @@
     <string name="red">Red</string>
     <string name="green">Green</string>
     <string name="blue">Blue</string>
+    <string name="select_playlists_title">Select Playlists</string>
+    <string name="save">Save</string>
 </resources>

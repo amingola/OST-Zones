@@ -30,7 +30,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ostzones.api.PlaylistDemoActivity
+import com.example.ostzones.api.PlaylistActivity
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -272,7 +272,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     fun ostsNavClick(item: MenuItem) {
-        val intent = Intent(this, PlaylistDemoActivity::class.java)
+        val intent = Intent(this, PlaylistActivity::class.java)
         startActivityForResult(intent, 1000)
     }
 
