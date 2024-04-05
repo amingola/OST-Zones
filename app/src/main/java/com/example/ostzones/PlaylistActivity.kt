@@ -159,7 +159,7 @@ class PlaylistActivity : AppCompatActivity() {
 
     fun onSaveButtonClick(view: View) {
         val str = playlists.filter { p -> p.isChecked }.joinToString(", ") { p -> p.name }
-        val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toMutableList() as ArrayList<String>
+        val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toCollection(ArrayList())
         Utils.toast(this, str)
 
         val resultIntent = Intent()

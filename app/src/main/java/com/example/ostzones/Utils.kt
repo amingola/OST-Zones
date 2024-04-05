@@ -92,12 +92,13 @@ object Utils {
     fun getColorComponentDecimalValue(colorValue: Int, color: SeekBarColor) =
         String.format("%08x", colorValue).slice(color.intRange).toInt(radix = 16)
 
-    fun playRandom(api: PlayerApi?, ostZone: OstZone) {
+    fun playRandom(api: PlayerApi?, ostZone: OstZone): OstZone? {
         val uris = ostZone.playlistUris
-        if(uris == null || uris.size == 0) return
+        if(uris.isNullOrEmpty()) return null
 
         val rand = Random.nextInt(0, uris.size)
         api?.play(ostZone.playlistUris?.get(rand))
+        return ostZone
     }
 
     private fun calculateDistance(startPosition: LatLng, endPosition: LatLng): Float {

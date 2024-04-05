@@ -8,7 +8,7 @@ class OstZone(
     var polygonOptions: HashMap<String, Any>
 ) {
     var id: Long? = null
-    var playlistUris: ArrayList<String>? = null
+    var playlistUris: List<String>? = null
 
     fun isPointInside(point: LatLng) : Boolean{
         val x = point.longitude

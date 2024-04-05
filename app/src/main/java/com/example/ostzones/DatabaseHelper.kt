@@ -21,12 +21,14 @@ class DatabaseHelper(context: Context) :
         private const val KEY_NAME = "name"
         private const val KEY_POINTS = "points"
         private const val KEY_POLYGON_OPTIONS = "polygon_options"
+        private const val KEY_PLAYLIST_URIS = "playlist_uris"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
         val createTableQuery =
             "CREATE TABLE $TABLE_NAME ($KEY_ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                    " $KEY_NAME, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT)"
+                    " $KEY_NAME, $KEY_POINTS TEXT, $KEY_POLYGON_OPTIONS TEXT, $KEY_PLAYLIST_URIS TEXT)"
         db.execSQL(createTableQuery)
     }
 
@@ -42,6 +44,7 @@ class DatabaseHelper(context: Context) :
             put(KEY_NAME, ostZone.name)
             put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
             put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
+            put(KEY_PLAYLIST_URIS, serializePlaylistUris(ostZone.playlistUris))
         }
         val row = db.insert(TABLE_NAME, null, values)
         db.close()
@@ -55,6 +58,7 @@ class DatabaseHelper(context: Context) :
             put(KEY_NAME, ostZone.name)
             put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
             put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
+            put(KEY_PLAYLIST_URIS, serializePlaylistUris(ostZone.playlistUris))
         }
         db.update(TABLE_NAME,  values, "$KEY_ID = ?", arrayOf(ostZone.id.toString()))
         db.close()
@@ -71,13 +75,13 @@ class DatabaseHelper(context: Context) :
                 put(KEY_NAME, ostZone.name)
                 put(KEY_POINTS, serializePoints(ostZone.polygonPoints))
                 put(KEY_POLYGON_OPTIONS, serializePolygonOptions(ostZone.polygonOptions))
+                put(KEY_PLAYLIST_URIS, serializePlaylistUris(ostZone.playlistUris))
             }
             db.insert(TABLE_NAME, null, values)
         }
         db.close()
     }
 
-    //TODO update this with retrieving the other data in OstZone (not just the polygon)
     fun getAllOstZones(): List<OstZone> {
         val allOstZones = mutableListOf<OstZone>()
         val db = this.readableDatabase
@@ -111,10 +115,13 @@ class DatabaseHelper(context: Context) :
         val name = cursor.getString(cursor.getColumnIndex(KEY_NAME))
         val pointsJson = cursor.getString(cursor.getColumnIndex(KEY_POINTS))
         val polygonOptionsJson = cursor.getString(cursor.getColumnIndex(KEY_POLYGON_OPTIONS))
+        val playListUrisJson = cursor.getString(cursor.getColumnIndex(KEY_PLAYLIST_URIS))
         val points = deserializePoints(pointsJson)
         val polygonOptions = deserializePolygonOptions(polygonOptionsJson)
+        val uris = deserializePlaylistUris(playListUrisJson)
         return OstZone(name, points, polygonOptions).apply {
             id = cursor.getLong(cursor.getColumnIndex(KEY_ID))
+            playlistUris = uris
         }
     }
 
@@ -132,6 +139,14 @@ class DatabaseHelper(context: Context) :
             jsonObject.put(opt.key, opt.value)
         }
         return jsonObject.toString()
+    }
+
+    private fun serializePlaylistUris(playlistUris: List<String>?): String {
+        val jsonArray = JSONArray()
+        playlistUris?.forEach { uri ->
+            jsonArray.put(uri)
+        }
+        return jsonArray.toString()
     }
 
     private fun deserializePoints(pointsJson: String): List<LatLng> {
@@ -152,5 +167,14 @@ class DatabaseHelper(context: Context) :
             polygonOptions[key] = jsonObject[key]
         }
         return polygonOptions
+    }
+
+    private fun deserializePlaylistUris(playListUrisJson: String): List<String> {
+        val jsonArray = JSONArray(playListUrisJson)
+        val uris = mutableListOf<String>()
+        for (i in 0 until jsonArray.length()) {
+            uris.add(jsonArray.getString(i))
+        }
+        return uris
     }
 }

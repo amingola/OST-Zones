@@ -91,6 +91,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private var bDrawing = false
     private var bEditing = false
     private var selectedPolygon: Polygon? = null
+    private var ostZonePlayingMusic: OstZone? = null
     private var polylineForPolygonBeingEdited: Polyline? = null
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
@@ -99,7 +100,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private lateinit var apiService: ApiService
     private lateinit var binding: ActivityMapsBinding
     private lateinit var googleMap: GoogleMap
-    private lateinit var locationManager: LocationManager
+    private lateinit var locationManager: LocationManager //TODO hit-or-miss on lateinit, possibly from debugger
     private lateinit var scheduledExecutor: ScheduledExecutorService
     private lateinit var handler: Handler
     private lateinit var bottomSheet: View
@@ -365,7 +366,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             }
         }else{
             val intent = Intent(this, PlaylistActivity::class.java)
-            intent.putStringArrayListExtra("selectedUris", selectedZone()!!.playlistUris)
+            val selectedUris = selectedZone()?.playlistUris?.toCollection(ArrayList())
+            intent.putStringArrayListExtra("selectedUris", selectedUris)
             startActivityForResult(intent, PLAYLIST_ACTIVITY_REQUEST_CODE)
         }
     }
@@ -654,8 +656,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                     polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
                         .values.firstOrNull()
                 }
-                if (ostZone != null) {
-                    Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)
+                if (ostZone != null && ostZone != ostZonePlayingMusic) {
+                    ostZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)
                     Log.d("location check", "User is inside ${ostZone.name}")
                 }
             }
@@ -665,7 +667,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     @SuppressLint("MissingPermission")
     private fun getUserLatLng(): LatLng? {
-        val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        return location?.let { LatLng(it.latitude, location.longitude) }
+        return try {
+            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            location?.let { LatLng(it.latitude, location.longitude) }
+        } catch (e: UninitializedPropertyAccessException) {
+            null //Just eat this; locationManager init is hit-or-miss :/
+        }
     }
 }
