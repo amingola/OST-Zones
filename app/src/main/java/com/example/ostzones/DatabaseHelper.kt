@@ -1,10 +1,11 @@
+package com.example.ostzones
+
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import com.example.ostzones.OstZone
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONArray
 import org.json.JSONObject
@@ -99,7 +100,7 @@ class DatabaseHelper(context: Context) :
         return result
     }
 
-    fun clearAllData() {
+    private fun clearAllData() {
         val db = this.writableDatabase
         db.delete(TABLE_NAME, null, null)
         db.close()
@@ -112,7 +113,7 @@ class DatabaseHelper(context: Context) :
         val polygonOptionsJson = cursor.getString(cursor.getColumnIndex(KEY_POLYGON_OPTIONS))
         val points = deserializePoints(pointsJson)
         val polygonOptions = deserializePolygonOptions(polygonOptionsJson)
-        return OstZone(points, polygonOptions, name).apply {
+        return OstZone(name, points, polygonOptions).apply {
             id = cursor.getLong(cursor.getColumnIndex(KEY_ID))
         }
     }

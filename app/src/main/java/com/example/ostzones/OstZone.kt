@@ -3,10 +3,12 @@ package com.example.ostzones
 import com.google.android.gms.maps.model.LatLng
 
 class OstZone(
+    var name: String?,
     var polygonPoints: List<LatLng>,
-    var polygonOptions: HashMap<String, Any>,
-    var name: String?) {
+    var polygonOptions: HashMap<String, Any>
+) {
     var id: Long? = null
+    var playlistUris: ArrayList<String>? = null
 
     fun isPointInside(point: LatLng) : Boolean{
         val x = point.longitude

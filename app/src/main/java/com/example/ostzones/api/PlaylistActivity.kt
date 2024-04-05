@@ -1,5 +1,6 @@
 package com.example.ostzones.api
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -108,7 +109,7 @@ class PlaylistActivity : AppCompatActivity() {
     }
 
     private fun initPlaylistsRecyclerView() {
-        val listAdapter = PlaylistListAdapter(this, playlists, )
+        val listAdapter = PlaylistListAdapter(this, playlists)
         listAdapter.onItemClick = { playlist: Playlist ->
             spotifyAppRemote?.playerApi?.play(playlist.uri)
         }
@@ -117,6 +118,15 @@ class PlaylistActivity : AppCompatActivity() {
         playlistsRecyclerView.also {
             it.adapter = listAdapter
             it.layoutManager = LinearLayoutManager(this)
+        }
+
+        initializeExistingPlaylistSelections()
+    }
+
+    private fun initializeExistingPlaylistSelections() {
+        val selectedPlaylistsUris = intent.getStringArrayListExtra("selectedUris")
+        selectedPlaylistsUris?.forEach {
+            uri -> playlists.find { playlist -> playlist.uri == uri }?.isChecked = true
         }
     }
 
@@ -152,6 +162,12 @@ class PlaylistActivity : AppCompatActivity() {
 
     fun onSaveButtonClick(view: View) {
         val str = playlists.filter { p -> p.isChecked }.joinToString(", ") { p -> p.name }
+        val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toMutableList() as ArrayList<String>
         Utils.toast(this, str)
+
+        val resultIntent = Intent()
+        resultIntent.putStringArrayListExtra("uris", uris)
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
     }
 }

@@ -1,6 +1,5 @@
 package com.example.ostzones
 
-import DatabaseHelper
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.annotation.SuppressLint
@@ -138,9 +137,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode == PLAYLIST_ACTIVITY_REQUEST_CODE){
             if(resultCode == Activity.RESULT_OK){
-
+                selectedZone()?.playlistUris = data?.getStringArrayListExtra("uris")
+                updateOstZone(selectedZone()!!)
             }else{
-                //TODO
+                Utils.longToast(this, "Failed to save playlist selection.")
             }
         }
     }
@@ -272,8 +272,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     fun ostsNavClick(item: MenuItem) {
-        val intent = Intent(this, PlaylistActivity::class.java)
-        startActivityForResult(intent, 1000)
+        if(selectedZone() == null){
+            if(polygonsToOstZones.size == 0){
+                Utils.toast(this, getString(R.string.ost_nav_warning_no_ost_zones))
+            }else{
+                Utils.toast(this, getString(R.string.ost_nav_warning_no_selected_ost_zone))
+            }
+        }else{
+            val intent = Intent(this, PlaylistActivity::class.java)
+            intent.putStringArrayListExtra("selectedUris", selectedZone()!!.playlistUris)
+            startActivityForResult(intent, PLAYLIST_ACTIVITY_REQUEST_CODE)
+        }
     }
 
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]
@@ -322,7 +331,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         //Create a new OST Zone
         if(existingOstZone == null) {
             val ostZone = databaseHelper.saveOstZone(
-                OstZone(points, polygonOptions, "")
+                OstZone("", points, polygonOptions)
             )
             polygonsToOstZones[polygon] = ostZone
 

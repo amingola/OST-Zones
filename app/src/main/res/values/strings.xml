@@ -286,4 +286,6 @@
     <string name="blue">Blue</string>
     <string name="select_playlists_title">Select Playlists</string>
     <string name="save">Save</string>
+    <string name="ost_nav_warning_no_ost_zones">Create an OST Zone first.</string>
+    <string name="ost_nav_warning_no_selected_ost_zone">Select an OST Zone from the map.</string>
 </resources>
