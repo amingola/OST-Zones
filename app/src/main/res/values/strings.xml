@@ -288,4 +288,6 @@
     <string name="save">Save</string>
     <string name="ost_nav_warning_no_ost_zones">Create an OST Zone first.</string>
     <string name="ost_nav_warning_no_selected_ost_zone">Select an OST Zone from the map.</string>
+    <string name="spotify_not_installed_warning">You must install spotify to play music from this device!</string>
+    <string name="spotify_failed_to_connect_warning">Could not connect to Spotify. Relaunch the app, or open Spotify and play something to set this as the current device.</string>
 </resources>

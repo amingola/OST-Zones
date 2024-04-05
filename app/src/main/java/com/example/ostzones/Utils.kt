@@ -8,12 +8,14 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.PolygonOptions
+import com.spotify.android.appremote.api.PlayerApi
 import java.lang.Math.toDegrees
 import java.lang.Math.toRadians
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 
 object Utils {
 
@@ -90,6 +92,14 @@ object Utils {
     fun getColorComponentDecimalValue(colorValue: Int, color: SeekBarColor) =
         String.format("%08x", colorValue).slice(color.intRange).toInt(radix = 16)
 
+    fun playRandom(api: PlayerApi?, ostZone: OstZone) {
+        val uris = ostZone.playlistUris
+        if(uris == null || uris.size == 0) return
+
+        val rand = Random.nextInt(0, uris.size)
+        api?.play(ostZone.playlistUris?.get(rand))
+    }
+
     private fun calculateDistance(startPosition: LatLng, endPosition: LatLng): Float {
         val results = FloatArray(1)
         Location.distanceBetween(
@@ -111,5 +121,4 @@ object Utils {
 
         return start.bearingTo(end)
     }
-
 }

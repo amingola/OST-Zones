@@ -84,9 +84,7 @@ class PlaylistActivity : AppCompatActivity() {
             } else if (response.type == AuthorizationResponse.Type.ERROR) {
                 Utils.longToast(this, response.error)
             }
-
         }
-
     }
 
     private suspend fun handleSuccessfulLogin(response: AuthorizationResponse) {
@@ -104,28 +102,6 @@ class PlaylistActivity : AppCompatActivity() {
             runOnUiThread {
                 initPlaylistsRecyclerView()
             }
-        }
-    }
-
-    private fun initPlaylistsRecyclerView() {
-        val listAdapter = PlaylistListAdapter(this, playlists)
-        listAdapter.onItemClick = { playlist: Playlist ->
-            spotifyAppRemote?.playerApi?.play(playlist.uri)
-        }
-
-        playlistsRecyclerView = findViewById(R.id.playlists_recycler_view)
-        playlistsRecyclerView.also {
-            it.adapter = listAdapter
-            it.layoutManager = LinearLayoutManager(this)
-        }
-
-        initializeExistingPlaylistSelections()
-    }
-
-    private fun initializeExistingPlaylistSelections() {
-        val selectedPlaylistsUris = intent.getStringArrayListExtra("selectedUris")
-        selectedPlaylistsUris?.forEach {
-            uri -> playlists.find { playlist -> playlist.uri == uri }?.isChecked = true
         }
     }
 
@@ -157,6 +133,28 @@ class PlaylistActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun initPlaylistsRecyclerView() {
+        val listAdapter = PlaylistListAdapter(this, playlists)
+        /*listAdapter.onItemClick = { playlist: Playlist ->
+            spotifyAppRemote?.playerApi?.play(playlist.uri)
+        }*/
+
+        playlistsRecyclerView = findViewById(R.id.playlists_recycler_view)
+        playlistsRecyclerView.also {
+            it.adapter = listAdapter
+            it.layoutManager = LinearLayoutManager(this)
+        }
+
+        initializeExistingPlaylistSelections()
+    }
+
+    private fun initializeExistingPlaylistSelections() {
+        val selectedPlaylistsUris = intent.getStringArrayListExtra("selectedUris")
+        selectedPlaylistsUris?.forEach {
+                uri -> playlists.find { playlist -> playlist.uri == uri }?.isChecked = true
+        }
     }
 
     fun onSaveButtonClick(view: View) {

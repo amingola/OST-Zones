@@ -3,7 +3,6 @@ package com.example.ostzones
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,8 +26,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ostzones.api.ApiService
+import com.example.ostzones.api.ApiServiceFactory
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -45,6 +47,14 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.spotify.android.appremote.api.ConnectionParams
+import com.spotify.android.appremote.api.Connector
+import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.android.appremote.api.error.CouldNotFindSpotifyApp
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -60,6 +70,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     GoogleMap.OnMyLocationClickListener,
     ActivityCompat.OnRequestPermissionsResultCallback {
 
+    private val logTag = "MapsActivity"
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val markersToMarkerOptions: MutableMap<Marker, MarkerOptions> = mutableMapOf()
     private val databaseHelper = DatabaseHelper(this)
@@ -68,6 +79,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         "strokeColor" to Color.BLACK,
         "clickable" to true
     )
+    private val redirectUri = "com.example.ostzones://login"
+    private val scopes = arrayOf(
+        "user-read-private",
+        "streaming",
+        "user-modify-playback-state",
+        "playlist-read-private",
+        "playlist-read-collaborative"
+    )
 
     private var bDrawing = false
     private var bEditing = false
@@ -75,7 +94,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private var polylineForPolygonBeingEdited: Polyline? = null
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
+    private var spotifyAppRemote: SpotifyAppRemote? = null //TODO move this to a factory
 
+    private lateinit var apiService: ApiService
     private lateinit var binding: ActivityMapsBinding
     private lateinit var googleMap: GoogleMap
     private lateinit var locationManager: LocationManager
@@ -110,6 +131,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         initBottomSheet()
         initEditZoneName()
         initOstZoneColorSliders()
+
+        val request = AuthorizationRequest.Builder(
+            BuildConfig.SPOTIFY_CLIENT_ID,
+            AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        ).setScopes(scopes).build()
+
+        AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -132,18 +161,75 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         initOstZoneRecyclerView()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         if(requestCode == PLAYLIST_ACTIVITY_REQUEST_CODE){
-            if(resultCode == Activity.RESULT_OK){
-                selectedZone()?.playlistUris = data?.getStringArrayListExtra("uris")
-                updateOstZone(selectedZone()!!)
-            }else{
-                Utils.longToast(this, "Failed to save playlist selection.")
-            }
+            handlePlaylistActivityFinish(resultCode, data)
+        }else if(requestCode == com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE){
+            handleSpotifyLoginFinish(resultCode, data)
         }
     }
 
+    private fun handleSpotifyLoginFinish(resultCode: Int, data: Intent?) {
+        val response = AuthorizationClient.getResponse(resultCode, data)
+
+        if (response.type == AuthorizationResponse.Type.TOKEN) {
+            lifecycleScope.launch {
+                try {
+                    handleSuccessfulLogin(response)
+                } catch (e: Exception) {
+                    Log.e(logTag, e.message!!)
+                }
+            }
+        } else if (response.type == AuthorizationResponse.Type.ERROR) {
+            Utils.longToast(this, response.error)
+        }
+    }
+
+    private fun handlePlaylistActivityFinish(resultCode: Int, data: Intent?) {
+        if (resultCode == RESULT_OK) {
+            selectedZone()?.playlistUris = data?.getStringArrayListExtra("uris")
+            updateOstZone(selectedZone()!!)
+        }
+    }
+
+    private fun handleSuccessfulLogin(response: AuthorizationResponse) {
+        initializeSpotifyAppRemote()
+
+        val token = response.accessToken
+        apiService = ApiServiceFactory.getApiService(token)
+    }
+
+    private fun initializeSpotifyAppRemote() {
+        val connectionParams = ConnectionParams.Builder(BuildConfig.SPOTIFY_CLIENT_ID)
+            .setRedirectUri(redirectUri)
+            .showAuthView(true)
+            .build()
+
+        SpotifyAppRemote.connect(this, connectionParams,
+            object : Connector.ConnectionListener {
+                override fun onConnected(spotifyAppRemote: SpotifyAppRemote) {
+                    this@MapsActivity.spotifyAppRemote = spotifyAppRemote
+                    Log.d(logTag, "Connected to Spotify")
+                }
+
+                override fun onFailure(throwable: Throwable){
+                    when (throwable) {
+                        is CouldNotFindSpotifyApp -> {
+                            Utils.longToast(this@MapsActivity,
+                                getString(R.string.spotify_not_installed_warning))
+                            Log.e(logTag, throwable.message!!)
+                        }else ->{
+                        Utils.longToast(this@MapsActivity,
+                            getString(R.string.spotify_failed_to_connect_warning))
+                    }
+                    }
+                }
+            }
+        )
+    }
     override fun onDestroy() {
         super.onDestroy()
         scheduledExecutor.shutdown()
@@ -564,13 +650,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         @SuppressLint("MissingPermission")
         override fun run() {
             if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
-                val name = getUserLatLng()?.let {
+                val ostZone = getUserLatLng()?.let {
                     polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
-                        .values.firstOrNull()?.name
+                        .values.firstOrNull()
                 }
-                if (name != null) {
-                    //TODO change playlist
-                    Log.d("location check", "User is inside $name")
+                if (ostZone != null) {
+                    Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)
+                    Log.d("location check", "User is inside ${ostZone.name}")
                 }
             }
             handler.postDelayed(this, CHECK_LOCATION_TASK_FREQUENCY)
