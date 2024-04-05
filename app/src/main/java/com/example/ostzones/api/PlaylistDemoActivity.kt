@@ -101,7 +101,7 @@ class PlaylistDemoActivity : AppCompatActivity() {
     }
 
     private fun initPlaylistsRecyclerView() {
-        val listAdapter = PlaylistListAdapter(this, playlists)
+        val listAdapter = PlaylistListAdapter(this, playlists, )
         listAdapter.onItemClick = { playlist: Playlist ->
             spotifyAppRemote?.playerApi?.play(playlist.uri)
         }

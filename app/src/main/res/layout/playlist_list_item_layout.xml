@@ -3,13 +3,15 @@
     android:id="@+id/playlist_list_item_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="horizontal"
+    android:padding="8dp">
 
-    <TextView
-        android:id="@+id/playlistNameTextView"
-        android:layout_width="match_parent"
+    <CheckBox
+        android:id="@+id/playlist_checkbox"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="32sp"/>
+        android:layout_gravity="center_vertical"
+        android:textSize="16sp"/>
 
     <!--<TextView
         android:id="@+id/textViewDescription"

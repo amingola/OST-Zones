@@ -4,7 +4,9 @@ import DatabaseHelper
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
@@ -28,6 +30,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ostzones.api.PlaylistDemoActivity
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -51,6 +54,7 @@ private const val FILL_COLOR_KEY = "fillColor"
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
+private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
     OnMarkerDragListener, OnPolygonClickListener,
@@ -130,6 +134,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         initOstZoneRecyclerView()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode == PLAYLIST_ACTIVITY_REQUEST_CODE){
+            if(resultCode == Activity.RESULT_OK){
+
+            }else{
+                //TODO
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         scheduledExecutor.shutdown()
@@ -203,6 +218,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     fun hasFineLocationPermission() =
         ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
+    fun toggleDrawingNewZoneClick(view: View){
+        val drawNewZoneBtn = findViewById<Button>(R.id.draw_new_zone_btn)
+        if(!bDrawing) {
+            drawNewZoneBtn.text = getString(R.string.cancel_drawing_zone)
+            bDrawing = true
+        }else {
+            resetDrawing()
+        }
+    }
+
     fun deleteSelectedZoneClick(view: View) = deleteSelectedZone()
 
     fun toggleEditingSelectedZone(view: View) {
@@ -223,26 +248,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         }
     }
 
-    fun zonesNavClick(item: MenuItem) {
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-        showBottomSheetPlaceholder()
-    }
-
-    fun ostsNavClick(item: MenuItem) {
-        Utils.toast(this, "OSTs")
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-    }
-
-    fun toggleDrawingNewZoneClick(view: View){
-        val drawNewZoneBtn = findViewById<Button>(R.id.draw_new_zone_btn)
-        if(!bDrawing) {
-            drawNewZoneBtn.text = getString(R.string.cancel_drawing_zone)
-            bDrawing = true
-        }else {
-            resetDrawing()
-        }
-    }
-
     fun updateSelectedPolygonColorOnMap() {
         val alpha = ostZoneColorAlphaSeekBar.progress
         val red = ostZoneColorRedSeekBar.progress
@@ -259,6 +264,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     fun updateSelectedPolygonColorInDatabase(){
         selectedZone()?.let { updateOstZone(it) }
+    }
+
+    fun zonesNavClick(item: MenuItem) {
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        showBottomSheetPlaceholder()
+    }
+
+    fun ostsNavClick(item: MenuItem) {
+        val intent = Intent(this, PlaylistDemoActivity::class.java)
+        startActivityForResult(intent, 1000)
     }
 
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]

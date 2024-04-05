@@ -25,7 +25,8 @@ data class Playlist(
     val type: String?,
     val uri: String?,
     @SerializedName("external_urls") val externalUrls: ExternalUrls?,
-    @SerializedName("snapshot_id") val snapshotId: String?
+    @SerializedName("snapshot_id") val snapshotId: String?,
+    var isChecked: Boolean = false
 )
 
 data class ExternalUrls(
