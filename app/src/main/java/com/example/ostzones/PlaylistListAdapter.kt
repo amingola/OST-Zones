@@ -1,4 +1,4 @@
-package com.example.ostzones.api
+package com.example.ostzones
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ostzones.R
 import com.example.ostzones.api.models.Playlist
 
 class PlaylistListAdapter(private val context: Context,

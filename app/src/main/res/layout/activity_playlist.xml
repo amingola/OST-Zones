@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".api.PlaylistActivity">
+    tools:context=".PlaylistActivity">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/playlists_recycler_view"

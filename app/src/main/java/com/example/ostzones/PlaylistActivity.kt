@@ -1,4 +1,4 @@
-package com.example.ostzones.api
+package com.example.ostzones
 
 import android.app.Activity
 import android.content.Intent
@@ -10,9 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ostzones.BuildConfig
-import com.example.ostzones.R
-import com.example.ostzones.Utils
+import com.example.ostzones.api.ApiService
+import com.example.ostzones.api.ApiServiceFactory
 import com.example.ostzones.api.models.Playlist
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector

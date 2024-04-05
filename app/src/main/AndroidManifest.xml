@@ -16,7 +16,7 @@
         android:theme="@style/Theme.OSTZones"
         tools:targetApi="31">
         <activity
-            android:name=".api.PlaylistActivity"
+            android:name=".PlaylistActivity"
             android:exported="true">
             <intent-filter>
                 <data
