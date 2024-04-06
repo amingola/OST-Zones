@@ -91,7 +91,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private var bDrawing = false
     private var bEditing = false
     private var selectedPolygon: Polygon? = null
-    private var ostZonePlayingMusic: OstZone? = null
+    private var idOfOstZonePlayingMusic: Long = 0L
     private var polylineForPolygonBeingEdited: Polyline? = null
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
@@ -118,6 +118,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if(savedInstanceState != null){
+            idOfOstZonePlayingMusic = savedInstanceState.getLong("zonePlayingMusic", 0L)
+        }
 
         binding = ActivityMapsBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -127,7 +130,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
         handler = Handler(Looper.getMainLooper())
-        startCheckWhenUserIsInOstZoneTask()
 
         initBottomSheet()
         initEditZoneName()
@@ -140,6 +142,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         ).setScopes(scopes).build()
 
         AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLong("zonePlayingMusic", idOfOstZonePlayingMusic)
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -198,6 +205,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun handleSuccessfulLogin(response: AuthorizationResponse) {
         initializeSpotifyAppRemote()
+        startCheckWhenUserIsInOstZoneTask()
 
         val token = response.accessToken
         apiService = ApiServiceFactory.getApiService(token)
@@ -359,11 +367,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     fun ostsNavClick(item: MenuItem) {
         if(selectedZone() == null){
-            if(polygonsToOstZones.size == 0){
-                Utils.toast(this, getString(R.string.ost_nav_warning_no_ost_zones))
-            }else{
-                Utils.toast(this, getString(R.string.ost_nav_warning_no_selected_ost_zone))
-            }
+            val warningMessage = if(polygonsToOstZones.isEmpty())
+                getString(R.string.ost_nav_warning_no_ost_zones)
+                else getString(R.string.ost_nav_warning_no_selected_ost_zone)
+            Utils.toast(this, warningMessage)
         }else{
             val intent = Intent(this, PlaylistActivity::class.java)
             val selectedUris = selectedZone()?.playlistUris?.toCollection(ArrayList())
@@ -656,9 +663,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                     polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
                         .values.firstOrNull()
                 }
-                if (ostZone != null && ostZone != ostZonePlayingMusic) {
-                    ostZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)
-                    Log.d("location check", "User is inside ${ostZone.name}")
+                Log.d("location check", "User is inside ${ostZone?.name}")
+                if (ostZone != null && ostZone.id != idOfOstZonePlayingMusic) {
+                    idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)!!
                 }
             }
             handler.postDelayed(this, CHECK_LOCATION_TASK_FREQUENCY)
