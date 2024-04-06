@@ -657,9 +657,13 @@ class MapsActivity : AppCompatActivity(),
                     polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
                         .values.firstOrNull()
                 }
+
                 Log.d("location check", "User is inside ${ostZone?.name}")
-                if (ostZone != null && ostZone.id != idOfOstZonePlayingMusic) {
+
+                if(ostZone != null && ostZone.id != idOfOstZonePlayingMusic){
                     idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)!!
+                }else{
+                    spotifyAppRemote?.playerApi?.pause()
                 }
             }
             handler.postDelayed(this, CHECK_LOCATION_TASK_FREQUENCY)
