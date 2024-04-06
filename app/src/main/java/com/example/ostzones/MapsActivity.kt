@@ -64,8 +64,11 @@ private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener,
-    OnMarkerDragListener, OnPolygonClickListener,
+class MapsActivity : AppCompatActivity(),
+    OnMapReadyCallback,
+    OnMarkerClickListener,
+    OnMarkerDragListener,
+    OnPolygonClickListener,
     GoogleMap.OnMyLocationButtonClickListener,
     GoogleMap.OnMyLocationClickListener,
     ActivityCompat.OnRequestPermissionsResultCallback {
@@ -233,7 +236,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
                         }else ->{
                         Utils.longToast(this@MapsActivity,
                             getString(R.string.spotify_failed_to_connect_warning))
-                    }
+                        }
                     }
                 }
             }
@@ -269,9 +272,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     override fun onMarkerDragStart(marker: Marker) {
-        if(marker == centroidMarker){
-            centroidMarkerStartPos = marker.position
-        }
+        if(marker == centroidMarker) centroidMarkerStartPos = marker.position
     }
 
     override fun onMarkerDrag(marker: Marker) {
@@ -350,10 +351,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         val color = Color.argb(alpha, red, green, blue)
 
         selectedPolygon?.fillColor = color
-
-        selectedZone()?.let {
-            it.polygonOptions[FILL_COLOR_KEY] = color
-        }
+        selectedZone()?.let { it.polygonOptions[FILL_COLOR_KEY] = color }
     }
 
     fun updateSelectedPolygonColorInDatabase(){
@@ -422,28 +420,31 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         val points = markersToMarkerOptions.map { entry -> entry.key.position }
         val polygon = googleMap.addPolygon(Utils.createPolygonOptions(points, polygonOptions))
 
-        //Create a new OST Zone
-        if(existingOstZone == null) {
-            val ostZone = databaseHelper.saveOstZone(
-                OstZone("", points, polygonOptions)
-            )
-            polygonsToOstZones[polygon] = ostZone
+        if(existingOstZone == null)
+            createNewOstZone(points, polygon)
+        else
+            overwriteExistingOstZone(existingOstZone, points, polygon)
 
-        //Overwrite existing OST Zone
-        }else{
-            existingOstZone.polygonPoints = points
-            existingOstZone.polygonOptions = polygonOptions
-            databaseHelper.updateOstZone(existingOstZone)
-
-            polygonsToOstZones.remove(selectedPolygon)
-            polygonsToOstZones[polygon] = existingOstZone
-
-            removeSelectedZoneFromMap()
-        }
 
         initOstZoneRecyclerView()
         resetDrawing()
         onPolygonClick(polygon)
+    }
+
+    private fun createNewOstZone(points: List<LatLng>, polygon: Polygon) {
+        val ostZone = databaseHelper.saveOstZone(OstZone("", points, polygonOptions))
+        polygonsToOstZones[polygon] = ostZone
+    }
+
+    private fun overwriteExistingOstZone(existingOstZone: OstZone, points: List<LatLng>, polygon: Polygon) {
+        existingOstZone.polygonPoints = points
+        existingOstZone.polygonOptions = polygonOptions
+        databaseHelper.updateOstZone(existingOstZone)
+
+        polygonsToOstZones.remove(selectedPolygon)
+        polygonsToOstZones[polygon] = existingOstZone
+
+        removeSelectedZoneFromMap()
     }
 
     private fun updateOstZone(ostZone: OstZone){
@@ -452,16 +453,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     }
 
     private fun loadOstZoneToMap(ostZone: OstZone){
-        val polygon = googleMap.addPolygon(
-            Utils.createPolygonOptions(ostZone.polygonPoints, ostZone.polygonOptions)
-        )
+        val polygonOptions = Utils.createPolygonOptions(ostZone.polygonPoints, ostZone.polygonOptions)
+        val polygon = googleMap.addPolygon(polygonOptions)
         polygonsToOstZones[polygon] = ostZone
         resetDrawing()
     }
 
     private fun drawMarkerOnMap(tappedPoint: LatLng) {
         val markerOptions = Utils.getOstZoneMarkerOptions(tappedPoint, markersToMarkerOptions.isEmpty())
-        markersToMarkerOptions
         googleMap.addMarker(markerOptions)?.let { markersToMarkerOptions[it] = markerOptions }
     }
 
@@ -565,11 +564,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     private fun initEditZoneName() {
         zoneNameEditText = findViewById(R.id.zone_name_edit_text)
+
         zoneNameEditText.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE ||
-                event != null && event.action == KeyEvent.ACTION_DOWN &&
-                event.keyCode == KeyEvent.KEYCODE_ENTER
-            ) {
+            val bPressedEnter = event != null
+                        && event.action == KeyEvent.ACTION_DOWN
+                        && event.keyCode == KeyEvent.KEYCODE_ENTER
+
+            if (actionId == EditorInfo.IME_ACTION_DONE || bPressedEnter) {
                 hideKeyboard(zoneNameEditText)
                 selectedZone()?.let {
                     it.name = zoneNameEditText.text.toString()
@@ -578,6 +579,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
                 return@setOnEditorActionListener true
             }
+
             false
         }
     }
@@ -593,18 +595,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         ostZoneColorBlueSeekBar = findViewById(R.id.polygon_options_slider_blue)
         ostZoneColorAlphaSeekBar = findViewById(R.id.polygon_options_slider_alpha)
 
-        ostZoneColorRedSeekBar.setOnSeekBarChangeListener(
-            RgbSeekBarOnChangeListener(this, ostZoneColorRedSeekBarLabel)
-        )
-        ostZoneColorGreenSeekBar.setOnSeekBarChangeListener(
-            RgbSeekBarOnChangeListener(this, ostZoneColorGreenSeekBarLabel)
-        )
-        ostZoneColorBlueSeekBar.setOnSeekBarChangeListener(
-            RgbSeekBarOnChangeListener(this, ostZoneColorBlueSeekBarLabel)
-        )
-        ostZoneColorAlphaSeekBar.setOnSeekBarChangeListener(
-            RgbSeekBarOnChangeListener(this, ostZoneColorAlphaSeekBarLabel)
-        )
+        ostZoneColorRedSeekBar.setOnSeekBarChangeListener(RgbSeekBarOnChangeListener(this, ostZoneColorRedSeekBarLabel))
+        ostZoneColorGreenSeekBar.setOnSeekBarChangeListener(RgbSeekBarOnChangeListener(this, ostZoneColorGreenSeekBarLabel))
+        ostZoneColorBlueSeekBar.setOnSeekBarChangeListener(RgbSeekBarOnChangeListener(this, ostZoneColorBlueSeekBarLabel))
+        ostZoneColorAlphaSeekBar.setOnSeekBarChangeListener(RgbSeekBarOnChangeListener(this, ostZoneColorAlphaSeekBarLabel))
     }
 
     private fun initOstZoneRecyclerView() {
@@ -676,7 +670,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
     private fun getUserLatLng(): LatLng? {
         return try {
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            location?.let { LatLng(it.latitude, location.longitude) }
+            location?.let { LatLng(it.latitude, it.longitude) }
         } catch (e: UninitializedPropertyAccessException) {
             null //Just eat this; locationManager init is hit-or-miss :/
         }
