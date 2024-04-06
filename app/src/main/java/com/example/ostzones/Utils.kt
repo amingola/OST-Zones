@@ -98,6 +98,8 @@ object Utils {
 
         val rand = Random.nextInt(0, uris.size)
         api?.play(ostZone.playlistUris?.get(rand))
+        api?.setShuffle(true)
+
         return ostZone.id
     }
 
