@@ -653,16 +653,16 @@ class MapsActivity : AppCompatActivity(),
         @SuppressLint("MissingPermission")
         override fun run() {
             if (hasFineLocationPermission() || hasCoarseLocationPermission()) {
-                val ostZone = getUserLatLng()?.let {
+                val occupiedOstZone = getUserLatLng()?.let {
                     polygonsToOstZones.filterValues { ostZone -> ostZone.isPointInside(it) }
                         .values.firstOrNull()
                 }
 
-                Log.d("location check", "User is inside ${ostZone?.name}")
+                Log.d("location check", "User is inside ${occupiedOstZone?.name}")
 
-                if(ostZone != null && ostZone.id != idOfOstZonePlayingMusic){
-                    idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, ostZone)!!
-                }else{
+                if(occupiedOstZone != null && occupiedOstZone.id != idOfOstZonePlayingMusic){
+                    idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, occupiedOstZone)!!
+                }else if(occupiedOstZone == null){
                     spotifyAppRemote?.playerApi?.pause()
                 }
             }
