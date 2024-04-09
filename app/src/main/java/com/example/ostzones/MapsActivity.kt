@@ -34,6 +34,7 @@ import com.example.ostzones.api.ApiServiceFactory
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.GoogleMap.OnMapClickListener
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener
 import com.google.android.gms.maps.GoogleMap.OnMarkerDragListener
 import com.google.android.gms.maps.GoogleMap.OnPolygonClickListener
@@ -43,6 +44,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
+import com.google.android.gms.maps.model.PolygonOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -59,12 +61,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
-private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L
+private const val CHECK_LOCATION_TASK_FREQUENCY = 10000L //milliseconds
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
 
 class MapsActivity : AppCompatActivity(),
+    OnMapClickListener,
     OnMapReadyCallback,
     OnMarkerClickListener,
     OnMarkerDragListener,
@@ -99,11 +102,12 @@ class MapsActivity : AppCompatActivity(),
     private var centroidMarker: Marker? = null
     private var centroidMarkerStartPos: LatLng? = null
     private var spotifyAppRemote: SpotifyAppRemote? = null //TODO move this to a factory
+    private var freehandPoints: MutableSet<LatLng> = mutableSetOf()
 
     private lateinit var apiService: ApiService
     private lateinit var binding: ActivityMapsBinding
     private lateinit var googleMap: GoogleMap
-    private lateinit var locationManager: LocationManager //TODO hit-or-miss on lateinit, possibly from debugger
+    private lateinit var locationManager: LocationManager
     private lateinit var scheduledExecutor: ScheduledExecutorService
     private lateinit var handler: Handler
     private lateinit var bottomSheet: View
@@ -154,12 +158,13 @@ class MapsActivity : AppCompatActivity(),
 
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
-        googleMap.setOnMapClickListener { tappedPoint -> handleMapTap(tappedPoint) }
+        googleMap.setOnMapClickListener(this)
         googleMap.setOnMarkerClickListener(this)
         googleMap.setOnMarkerDragListener(this)
         googleMap.setOnPolygonClickListener(this)
         googleMap.setOnMyLocationButtonClickListener(this)
         googleMap.setOnMyLocationClickListener(this)
+//        googleMap.setOnCameraMoveStartedListener(this)
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         enableMyLocation()
@@ -242,10 +247,21 @@ class MapsActivity : AppCompatActivity(),
             }
         )
     }
+
     override fun onDestroy() {
         super.onDestroy()
         scheduledExecutor.shutdown()
         handler.removeCallbacks(checkUserIsInOstZoneTask)
+    }
+
+    override fun onMapClick(tappedPoint: LatLng) {
+        if(selectedPolygon != null && !bEditing){
+            deselectZone()
+            return
+        }
+        if(!bDrawing) return
+        drawMarkerOnMap(tappedPoint)
+        redrawPolyline()
     }
 
     override fun onMyLocationButtonClick(): Boolean {
@@ -277,6 +293,8 @@ class MapsActivity : AppCompatActivity(),
 
     override fun onMarkerDrag(marker: Marker) {
         //googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
+        Log.d("drag", marker.position.toString())
+        freehandPoints.add(marker.position)
     }
 
     override fun onMarkerDragEnd(marker: Marker) {
@@ -285,6 +303,12 @@ class MapsActivity : AppCompatActivity(),
         }
         redrawPolyline()
         drawCentroidMarkerForPolylineToMap()
+
+        googleMap.addPolygon(PolygonOptions().apply{
+            addAll(freehandPoints)
+            fillColor(Color.RED)
+            strokeColor(Color.BLACK)
+        })
     }
 
     override fun onPolygonClick(polygon: Polygon) {
@@ -404,16 +428,6 @@ class MapsActivity : AppCompatActivity(),
                 googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM))
             }
         }
-    }
-
-    private fun handleMapTap(tappedPoint: LatLng) {
-        if(selectedPolygon != null && !bEditing){
-            deselectZone()
-            return
-        }
-        if(!bDrawing) return
-        drawMarkerOnMap(tappedPoint)
-        redrawPolyline()
     }
 
     private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?){
