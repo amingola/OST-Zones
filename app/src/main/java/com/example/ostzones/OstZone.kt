@@ -24,11 +24,8 @@ class OstZone(
             val xj = polygonPoints[j].longitude
             val yj = polygonPoints[j].latitude
 
-            val intersect = ((yi > y) != (yj > y)) &&
-                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
-            if (intersect) {
-                isInside = !isInside
-            }
+            val bIntersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+            if (bIntersect) isInside = !isInside
             j = i++
         }
         return isInside
