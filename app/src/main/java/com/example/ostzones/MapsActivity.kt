@@ -42,9 +42,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
-import com.google.android.gms.maps.model.PolygonOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -61,7 +59,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
-private const val CHECK_LOCATION_TASK_FREQUENCY = 10000L //milliseconds
+private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L //milliseconds
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
@@ -78,7 +76,6 @@ class MapsActivity : AppCompatActivity(),
 
     private val logTag = "MapsActivity"
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
-    private val markersToMarkerOptions: MutableMap<Marker, MarkerOptions> = mutableMapOf()
     private val databaseHelper = DatabaseHelper(this)
     private val polygonOptions = hashMapOf<String, Any>(
         "fillColor" to Color.RED,
@@ -95,14 +92,14 @@ class MapsActivity : AppCompatActivity(),
     )
 
     private var bDrawing = false
-    private var bEditing = false
+    //private var bEditing = false
     private var selectedPolygon: Polygon? = null
-    private var idOfOstZonePlayingMusic: Long = 0L
-    private var polylineForPolygonBeingEdited: Polyline? = null
-    private var centroidMarker: Marker? = null
-    private var centroidMarkerStartPos: LatLng? = null
+    private var polyline: Polyline? = null
+    private var freehandMarker: Marker? = null
+    private var idOfOstZonePlayingMusic: Long? = 0L
     private var spotifyAppRemote: SpotifyAppRemote? = null //TODO move this to a factory
     private var freehandPoints: MutableSet<LatLng> = mutableSetOf()
+    private var freehandMarkerCounter = 0
 
     private lateinit var apiService: ApiService
     private lateinit var binding: ActivityMapsBinding
@@ -153,7 +150,8 @@ class MapsActivity : AppCompatActivity(),
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putLong("zonePlayingMusic", idOfOstZonePlayingMusic)
+        if(idOfOstZonePlayingMusic != null)
+            outState.putLong("zonePlayingMusic", idOfOstZonePlayingMusic!!)
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -255,13 +253,16 @@ class MapsActivity : AppCompatActivity(),
     }
 
     override fun onMapClick(tappedPoint: LatLng) {
-        if(selectedPolygon != null && !bEditing){
+        if(selectedPolygon != null){
             deselectZone()
             return
         }
-        if(!bDrawing) return
-        drawMarkerOnMap(tappedPoint)
-        redrawPolyline()
+
+        freehandMarker?.remove()
+        if(bDrawing){
+            val markerOptions = Utils.getFreehandDrawingMarkerOptions(tappedPoint, resources)
+            freehandMarker = googleMap.addMarker(markerOptions)
+        }
     }
 
     override fun onMyLocationButtonClick(): Boolean {
@@ -273,7 +274,7 @@ class MapsActivity : AppCompatActivity(),
         Utils.toast(this, "Current location:\n$location")
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        //Only create the OstZone on clicking the first marker, only the first marker is full opacity
+        /*//Only create the OstZone on clicking the first marker, only the first marker is full opacity
         if(marker.alpha < 1f) return false
         if(markersToMarkerOptions.size < 3){
             Utils.toast(this, getString(R.string.minimum_zone_points_warning))
@@ -282,38 +283,34 @@ class MapsActivity : AppCompatActivity(),
 
         drawOstZoneOnMapAndSave(selectedZone())
         for (m in markersToMarkerOptions) m.key.remove()
-        markersToMarkerOptions.clear()
-
+        markersToMarkerOptions.clear()*/
+        //TODO this is probably unnecessary now
         return true
     }
 
     override fun onMarkerDragStart(marker: Marker) {
-        if(marker == centroidMarker) centroidMarkerStartPos = marker.position
+        //TODO (nothing)
     }
 
     override fun onMarkerDrag(marker: Marker) {
-        //googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
-        Log.d("drag", marker.position.toString())
+        //Only add a marker every 10th "tick"
+        if(freehandMarkerCounter % 10 == 0){
+            polyline?.remove()
+            freehandPoints.add(marker.position)
+            polyline = googleMap.addPolyline(PolylineOptions().addAll(freehandPoints))
+        }
+        freehandMarkerCounter++
         freehandPoints.add(marker.position)
     }
 
     override fun onMarkerDragEnd(marker: Marker) {
-        if(marker == centroidMarker){
-            translateSelectedPolygonWithCentroidMarker(marker)
-        }
-        redrawPolyline()
-        drawCentroidMarkerForPolylineToMap()
-
-        googleMap.addPolygon(PolygonOptions().apply{
-            addAll(freehandPoints)
-            fillColor(Color.RED)
-            strokeColor(Color.BLACK)
-        })
+        freehandMarker?.remove()
+        freehandMarker = null
+        drawOstZoneOnMapAndSave(null)
+        resetDrawing()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
-        if(bDrawing) return
-
         selectedPolygon = polygon
         val ostZone = polygonsToOstZones[polygon]
 
@@ -340,8 +337,12 @@ class MapsActivity : AppCompatActivity(),
     fun toggleDrawingNewZoneClick(view: View){
         val drawNewZoneBtn = findViewById<Button>(R.id.draw_new_zone_btn)
         if(!bDrawing) {
+            deselectZone()
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             drawNewZoneBtn.text = getString(R.string.cancel_drawing_zone)
+
             bDrawing = true
+            Utils.longToast(this, getString(R.string.start_drawing_zone_toast))
         }else {
             resetDrawing()
         }
@@ -350,21 +351,9 @@ class MapsActivity : AppCompatActivity(),
     fun deleteSelectedZoneClick(view: View) = deleteSelectedZone()
 
     fun toggleEditingSelectedZone(view: View) {
-        if(!bEditing){
-            bDrawing = true
-            bEditing = true
-
-            (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.cancel_editing)
-
-            val points = selectedPolygon?.points!!.toMutableList().apply{ removeLast() }
-            for(point in points){
-                drawMarkerOnMap(point)
-            }
-
-            drawCentroidMarkerForSelectedPolygonToMap()
-        }else{
-            resetDrawing()
-        }
+        //TODO allow for completely redrawing the OST Zone's polygon
+        //  have it be more transparent than before while the new one is drawn
+        (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.cancel_editing)
     }
 
     fun updateSelectedPolygonColorOnMap() {
@@ -431,7 +420,7 @@ class MapsActivity : AppCompatActivity(),
     }
 
     private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?){
-        val points = markersToMarkerOptions.map { entry -> entry.key.position }
+        val points = freehandPoints.toList()
         val polygon = googleMap.addPolygon(Utils.createPolygonOptions(points, polygonOptions))
 
         if(existingOstZone == null)
@@ -439,14 +428,13 @@ class MapsActivity : AppCompatActivity(),
         else
             overwriteExistingOstZone(existingOstZone, points, polygon)
 
-
         initOstZoneRecyclerView()
         resetDrawing()
         onPolygonClick(polygon)
     }
 
     private fun createNewOstZone(points: List<LatLng>, polygon: Polygon) {
-        val ostZone = databaseHelper.saveOstZone(OstZone("", points, polygonOptions))
+        val ostZone = databaseHelper.saveOstZone(OstZone("Untitled ${points.size}", points, polygonOptions))
         polygonsToOstZones[polygon] = ostZone
     }
 
@@ -473,32 +461,6 @@ class MapsActivity : AppCompatActivity(),
         resetDrawing()
     }
 
-    private fun drawMarkerOnMap(tappedPoint: LatLng) {
-        val markerOptions = Utils.getOstZoneMarkerOptions(tappedPoint, markersToMarkerOptions.isEmpty())
-        googleMap.addMarker(markerOptions)?.let { markersToMarkerOptions[it] = markerOptions }
-    }
-
-    private fun drawCentroidMarkerForSelectedPolygonToMap() {
-        centroidMarker?.remove()
-        val centroidPoint = Utils.computeCentroidOfSelectedPolygon(selectedPolygon!!)
-        val centroidMarkerOptions = Utils.getCentroidMarkerOptions(centroidPoint)
-        centroidMarker = googleMap.addMarker(centroidMarkerOptions)
-    }
-
-    private fun drawCentroidMarkerForPolylineToMap() {
-        centroidMarker?.remove()
-        val centroidPoint = Utils.computeCentroidOfPoints(polylineForPolygonBeingEdited!!.points)
-        val centroidMarkerOptions = Utils.getCentroidMarkerOptions(centroidPoint)
-        centroidMarker = googleMap.addMarker(centroidMarkerOptions)
-    }
-
-    private fun redrawPolyline() {
-        polylineForPolygonBeingEdited?.remove()
-        polylineForPolygonBeingEdited = googleMap.addPolyline(PolylineOptions().apply {
-            addAll(markersToMarkerOptions.map { entry -> entry.key.position })
-        })
-    }
-
     private fun deselectZone(){
         selectedPolygon = null
         showBottomSheetPlaceholder()
@@ -507,16 +469,7 @@ class MapsActivity : AppCompatActivity(),
 
     private fun resetDrawing() {
         bDrawing = false
-        bEditing = false
-
-        polylineForPolygonBeingEdited?.remove()
-        polylineForPolygonBeingEdited = null
-
-        for(m in markersToMarkerOptions) m.key.remove()
-        markersToMarkerOptions.clear()
-
-        centroidMarker?.remove()
-        centroidMarker = null
+        freehandPoints.clear()
 
         findViewById<Button>(R.id.draw_new_zone_btn).text = getString(R.string.draw_new_zone)
         (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.edit_selected_zone)
@@ -534,22 +487,6 @@ class MapsActivity : AppCompatActivity(),
 
         showBottomSheetPlaceholder()
         zoneNameEditText.setText("")
-    }
-
-    private fun translateSelectedPolygonWithCentroidMarker(centroidMarker: Marker) {
-        val newMarkers: MutableMap<Marker, MarkerOptions> = mutableMapOf()
-
-        for(polygonMarker in markersToMarkerOptions.keys){
-            val newPosition = Utils.calculateNewPosition(centroidMarkerStartPos!!, centroidMarker.position, polygonMarker.position)
-            val markerOptions = markersToMarkerOptions[polygonMarker]!!.position(newPosition)
-            val newMarker = googleMap.addMarker(markerOptions)
-
-            polygonMarker.remove()
-            newMarkers[newMarker!!] = markerOptions
-        }
-
-        markersToMarkerOptions.clear()
-        markersToMarkerOptions.putAll(newMarkers)
     }
 
     private fun loadSavedOstZones(){
@@ -675,7 +612,7 @@ class MapsActivity : AppCompatActivity(),
                 Log.d("location check", "User is inside ${occupiedOstZone?.name}")
 
                 if(occupiedOstZone != null && occupiedOstZone.id != idOfOstZonePlayingMusic){
-                    idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, occupiedOstZone)!!
+                    idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, occupiedOstZone)
                 }else if(occupiedOstZone == null){
                     spotifyAppRemote?.playerApi?.pause()
                 }

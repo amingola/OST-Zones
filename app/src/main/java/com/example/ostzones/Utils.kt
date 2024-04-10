@@ -1,5 +1,8 @@
 package com.example.ostzones
 
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Location
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -41,6 +44,18 @@ object Utils {
         return MarkerOptions().apply{
             position(tappedPoint)
             if(!bFirstMarker) alpha(0.25f)
+            draggable(true)
+        }
+    }
+
+    fun getFreehandDrawingMarkerOptions(tappedPoint: LatLng, resources: Resources): MarkerOptions {
+        val iconBitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.pen) // Replace R.drawable.your_marker_icon with your actual drawable resource
+        val resizedBitmap = Bitmap.createScaledBitmap(iconBitmap, 48, 48, false) // Replace width and height with the desired dimensions
+        val icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap)
+
+        return MarkerOptions().apply{
+            position(tappedPoint)
+            icon(icon)
             draggable(true)
         }
     }
