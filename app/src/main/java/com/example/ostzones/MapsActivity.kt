@@ -562,7 +562,8 @@ class MapsActivity : AppCompatActivity(),
         listAdapter.onItemClick = { ostZone ->
             val centroid = Utils.computeCentroidOfPoints(ostZone.polygonPoints)
             val selectedPolygon = polygonFromZone(ostZone)
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, DEFAULT_ZOOM))
+            val zoom = Utils.calculateZoomLevel(resources, selectedPolygon.points)
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, zoom))
             onPolygonClick(selectedPolygon)
         }
         ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)

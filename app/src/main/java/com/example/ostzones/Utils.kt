@@ -3,13 +3,16 @@ package com.example.ostzones
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.location.Location
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolygonOptions
 import com.spotify.android.appremote.api.PlayerApi
+import kotlin.math.ln
 import kotlin.random.Random
 
 object Utils {
@@ -65,5 +68,28 @@ object Utils {
         api?.setShuffle(true)
 
         return ostZone.id
+    }
+
+    fun calculateZoomLevel(resources: Resources, polygonPoints: List<LatLng>): Float {
+        val builder = LatLngBounds.Builder()
+        for (point in polygonPoints) builder.include(point)
+        val bounds = builder.build()
+
+        val centroid = computeCentroidOfPoints(polygonPoints)
+        val distance = calculateDistance(centroid, bounds.center)
+        val screenSize = resources.displayMetrics.widthPixels.toFloat()
+
+        val metersPerPixel = distance / screenSize
+
+        //According to ChatGPT, the significance of the first constant here is
+        //"the zoom level at which the map shows the entire world" (16 was provided, which isn't accurate).
+        //10 works decently well for zone sizes from that of a house to half the size of the US.
+        return ((10 - ln(metersPerPixel.toDouble()) / ln(2.0))).toFloat()
+    }
+
+    private fun calculateDistance(point1: LatLng, point2: LatLng): Float {
+        val results = FloatArray(1)
+        Location.distanceBetween(point1.latitude, point1.longitude, point2.latitude, point2.longitude, results)
+        return results[0]
     }
 }
