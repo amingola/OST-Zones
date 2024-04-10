@@ -92,7 +92,7 @@ class MapsActivity : AppCompatActivity(),
     )
 
     private var bDrawing = false
-    //private var bEditing = false
+    private var bEditing = false
     private var selectedPolygon: Polygon? = null
     private var polyline: Polyline? = null
     private var freehandMarker: Marker? = null
@@ -253,10 +253,7 @@ class MapsActivity : AppCompatActivity(),
     }
 
     override fun onMapClick(tappedPoint: LatLng) {
-        if(selectedPolygon != null){
-            deselectZone()
-            return
-        }
+        if(selectedPolygon != null) deselectZone()
 
         freehandMarker?.remove()
         if(bDrawing){
@@ -273,24 +270,8 @@ class MapsActivity : AppCompatActivity(),
     override fun onMyLocationClick(location: Location) =
         Utils.toast(this, "Current location:\n$location")
 
-    override fun onMarkerClick(marker: Marker): Boolean {
-        /*//Only create the OstZone on clicking the first marker, only the first marker is full opacity
-        if(marker.alpha < 1f) return false
-        if(markersToMarkerOptions.size < 3){
-            Utils.toast(this, getString(R.string.minimum_zone_points_warning))
-            return false
-        }
-
-        drawOstZoneOnMapAndSave(selectedZone())
-        for (m in markersToMarkerOptions) m.key.remove()
-        markersToMarkerOptions.clear()*/
-        //TODO this is probably unnecessary now
-        return true
-    }
-
-    override fun onMarkerDragStart(marker: Marker) {
-        //TODO (nothing)
-    }
+    override fun onMarkerClick(marker: Marker) = true
+    override fun onMarkerDragStart(marker: Marker) {}
 
     override fun onMarkerDrag(marker: Marker) {
         //Only add a marker every 10th "tick"
@@ -307,7 +288,9 @@ class MapsActivity : AppCompatActivity(),
         freehandMarker?.remove()
         freehandMarker = null
         drawOstZoneOnMapAndSave(null)
-        resetDrawing()
+        resetDrawingState()
+
+        if(bEditing) resetEditingState()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
@@ -337,23 +320,30 @@ class MapsActivity : AppCompatActivity(),
     fun toggleDrawingNewZoneClick(view: View){
         val drawNewZoneBtn = findViewById<Button>(R.id.draw_new_zone_btn)
         if(!bDrawing) {
-            deselectZone()
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             drawNewZoneBtn.text = getString(R.string.cancel_drawing_zone)
 
-            bDrawing = true
-            Utils.longToast(this, getString(R.string.start_drawing_zone_toast))
+            startDrawingState()
         }else {
-            resetDrawing()
+            resetDrawingState()
         }
     }
 
     fun deleteSelectedZoneClick(view: View) = deleteSelectedZone()
 
     fun toggleEditingSelectedZone(view: View) {
-        //TODO allow for completely redrawing the OST Zone's polygon
-        //  have it be more transparent than before while the new one is drawn
-        (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.cancel_editing)
+        if(!bEditing){
+            bEditing = true
+            startDrawingState()
+//            bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.cancel_editing)
+
+            //Halve the opacity of the selected zone
+            //selectedPolygon?.fillColor = halfOpacityOfColor(selectedPolygon?.fillColor!!)
+        }else{
+            resetDrawingState()
+            resetEditingState()
+        }
     }
 
     fun updateSelectedPolygonColorOnMap() {
@@ -419,34 +409,35 @@ class MapsActivity : AppCompatActivity(),
         }
     }
 
-    private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?){
+    private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?): OstZone {
         val points = freehandPoints.toList()
         val polygon = googleMap.addPolygon(Utils.createPolygonOptions(points, polygonOptions))
-
-        if(existingOstZone == null)
+        val savedOstZone: OstZone = if(existingOstZone == null)
             createNewOstZone(points, polygon)
         else
             overwriteExistingOstZone(existingOstZone, points, polygon)
 
         initOstZoneRecyclerView()
-        resetDrawing()
         onPolygonClick(polygon)
+        return savedOstZone
     }
 
-    private fun createNewOstZone(points: List<LatLng>, polygon: Polygon) {
+    private fun createNewOstZone(points: List<LatLng>, polygon: Polygon): OstZone {
         val ostZone = databaseHelper.saveOstZone(OstZone("Untitled ${points.size}", points, polygonOptions))
         polygonsToOstZones[polygon] = ostZone
+        return ostZone
     }
 
-    private fun overwriteExistingOstZone(existingOstZone: OstZone, points: List<LatLng>, polygon: Polygon) {
+    private fun overwriteExistingOstZone(existingOstZone: OstZone, points: List<LatLng>, polygon: Polygon): OstZone {
         existingOstZone.polygonPoints = points
         existingOstZone.polygonOptions = polygonOptions
-        databaseHelper.updateOstZone(existingOstZone)
+        val updatedOstZone = databaseHelper.updateOstZone(existingOstZone)
 
         polygonsToOstZones.remove(selectedPolygon)
         polygonsToOstZones[polygon] = existingOstZone
 
         removeSelectedZoneFromMap()
+        return updatedOstZone
     }
 
     private fun updateOstZone(ostZone: OstZone){
@@ -458,21 +449,29 @@ class MapsActivity : AppCompatActivity(),
         val polygonOptions = Utils.createPolygonOptions(ostZone.polygonPoints, ostZone.polygonOptions)
         val polygon = googleMap.addPolygon(polygonOptions)
         polygonsToOstZones[polygon] = ostZone
-        resetDrawing()
     }
 
     private fun deselectZone(){
         selectedPolygon = null
-        showBottomSheetPlaceholder()
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         zoneNameEditText.setText("")
     }
 
-    private fun resetDrawing() {
+    private fun startDrawingState() {
+        bDrawing = true
+        Utils.longToast(this, getString(R.string.start_drawing_zone_toast))
+    }
+
+    private fun resetDrawingState() {
         bDrawing = false
         freehandPoints.clear()
-
         findViewById<Button>(R.id.draw_new_zone_btn).text = getString(R.string.draw_new_zone)
-        (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.edit_selected_zone)
+    }
+
+    private fun resetEditingState() {
+        bEditing = false
+        (findViewById<TextView>(R.id.edit_selected_zone_btn)).text =
+            getString(R.string.edit_selected_zone)
     }
 
     private fun deleteSelectedZone() {
@@ -597,6 +596,14 @@ class MapsActivity : AppCompatActivity(),
 
     private fun startCheckWhenUserIsInOstZoneTask() =
         handler.postDelayed(checkUserIsInOstZoneTask, CHECK_LOCATION_TASK_FREQUENCY)
+
+    private fun halfOpacityOfColor(color: Int): Int{
+        val a = Utils.getColorComponentDecimalValue(color, SeekBarColor.ALPHA).toFloat() / 2
+        val r = Utils.getColorComponentDecimalValue(color, SeekBarColor.RED).toFloat()
+        val g = Utils.getColorComponentDecimalValue(color, SeekBarColor.GREEN).toFloat()
+        val b = Utils.getColorComponentDecimalValue(color, SeekBarColor.BLUE).toFloat()
+        return Color.argb(a, r, g, b)
+    }
 
     private val checkUserIsInOstZoneTask = checkUserIsInOstZoneTask()
 
