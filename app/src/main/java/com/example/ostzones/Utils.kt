@@ -34,7 +34,7 @@ object Utils {
 
     fun getFreehandDrawingMarkerOptions(tappedPoint: LatLng, resources: Resources): MarkerOptions {
         val iconBitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.pen) // Replace R.drawable.your_marker_icon with your actual drawable resource
-        val resizedBitmap = Bitmap.createScaledBitmap(iconBitmap, 48, 48, false) // Replace width and height with the desired dimensions
+        val resizedBitmap = Bitmap.createScaledBitmap(iconBitmap, 60, 60, false) // Replace width and height with the desired dimensions
         val icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap)
 
         return MarkerOptions().apply{
