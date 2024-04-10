@@ -60,7 +60,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L //milliseconds
-private const val FREEHAND_MARKER_DRAW_FREQUENCY = 10   //every nth marker will be drawn
+private const val FREEHAND_MARKER_DRAW_FREQUENCY = 10   //every nth marker to be drawn when free-hand drawing
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
@@ -252,7 +252,7 @@ class MapsActivity : AppCompatActivity(),
     }
 
     override fun onMapClick(tappedPoint: LatLng) {
-        if(selectedPolygon != null) deselectZone()
+        if(selectedPolygon != null && !bEditing) deselectZone()
 
         freehandMarker?.remove()
         if(bDrawing){
@@ -284,14 +284,17 @@ class MapsActivity : AppCompatActivity(),
 
     override fun onMarkerDragEnd(marker: Marker) {
         freehandMarker?.remove()
+        polyline?.remove()
         freehandMarker = null
-        drawOstZoneOnMapAndSave(null)
+        drawOstZoneOnMapAndSave(selectedZone())
         resetDrawingState()
 
         if(bEditing) resetEditingState()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
+        if(bEditing) return //disallow interacting w/ other zones while editing
+
         selectedPolygon = polygon
         val ostZone = polygonsToOstZones[polygon]
 
@@ -327,13 +330,15 @@ class MapsActivity : AppCompatActivity(),
         }
     }
 
-    fun deleteSelectedZoneClick(view: View) = deleteSelectedZone()
+    fun deleteSelectedZoneClick(view: View) {
+        polygonsToOstZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
+        removeSelectedZoneFromMap()
+    }
 
     fun toggleEditingSelectedZone(view: View) {
         if(!bEditing){
             bEditing = true
             startDrawingState()
-//            bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             (findViewById<TextView>(R.id.edit_selected_zone_btn)).text = getString(R.string.cancel_editing)
 
             //Halve the opacity of the selected zone
@@ -380,6 +385,9 @@ class MapsActivity : AppCompatActivity(),
 
     private fun selectedZone() = polygonsToOstZones[selectedPolygon]
 
+    private fun polygonFromZone(existingOstZone: OstZone) =
+        polygonsToOstZones.filterValues { it == existingOstZone }.keys.first()
+
     @SuppressLint("MissingPermission")
     private fun enableMyLocation() {
         val centerLocationButton = findViewById<FloatingActionButton>(R.id.center_location_btn)
@@ -409,11 +417,17 @@ class MapsActivity : AppCompatActivity(),
 
     private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?): OstZone {
         val newPoints = freehandPoints.toList()
-        val newPolygon = googleMap.addPolygon(Utils.createPolygonOptions(newPoints, polygonOptions))
-        val savedOstZone: OstZone = if(existingOstZone == null)
-            createNewOstZone(newPoints, newPolygon)
-        else
-            overwriteExistingOstZone(existingOstZone, newPoints, newPolygon)
+        val newPolygon: Polygon?
+        val savedOstZone: OstZone?
+
+        if(existingOstZone == null) {
+            newPolygon = googleMap.addPolygon(Utils.createPolygonOptions(newPoints, polygonOptions))
+            savedOstZone = createNewOstZone(newPoints, newPolygon)
+        } else {
+            val newPolygonOptions = Utils.createPolygonOptions(newPoints, existingOstZone.polygonOptions)
+            newPolygon = googleMap.addPolygon(newPolygonOptions)
+            savedOstZone = overwriteExistingOstZone(existingOstZone, newPoints, newPolygon)
+        }
 
         initOstZoneRecyclerView()
         onPolygonClick(newPolygon)
@@ -428,10 +442,9 @@ class MapsActivity : AppCompatActivity(),
 
     private fun overwriteExistingOstZone(existingOstZone: OstZone, newPoints: List<LatLng>, newPolygon: Polygon): OstZone {
         existingOstZone.polygonPoints = newPoints
-        existingOstZone.polygonOptions = polygonOptions
         val updatedOstZone = databaseHelper.updateOstZone(existingOstZone)
 
-        polygonsToOstZones.remove(selectedPolygon)
+        polygonsToOstZones.remove(polygonFromZone(existingOstZone))
         polygonsToOstZones[newPolygon] = existingOstZone
 
         removeSelectedZoneFromMap()
@@ -443,16 +456,25 @@ class MapsActivity : AppCompatActivity(),
         initOstZoneRecyclerView()
     }
 
-    private fun loadOstZoneToMap(ostZone: OstZone){
-        val polygonOptions = Utils.createPolygonOptions(ostZone.polygonPoints, ostZone.polygonOptions)
-        val polygon = googleMap.addPolygon(polygonOptions)
-        polygonsToOstZones[polygon] = ostZone
-    }
-
     private fun deselectZone(){
         selectedPolygon = null
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         zoneNameEditText.setText("")
+    }
+
+    private fun removeSelectedZoneFromMap() {
+        selectedPolygon?.remove()
+        polygonsToOstZones.remove(selectedPolygon)
+        selectedPolygon = null
+
+        showBottomSheetPlaceholder()
+        zoneNameEditText.setText("")
+    }
+
+    private fun loadOstZoneToMap(ostZone: OstZone){
+        val polygonOptions = Utils.createPolygonOptions(ostZone.polygonPoints, ostZone.polygonOptions)
+        val polygon = googleMap.addPolygon(polygonOptions)
+        polygonsToOstZones[polygon] = ostZone
     }
 
     private fun startDrawingState() {
@@ -470,20 +492,6 @@ class MapsActivity : AppCompatActivity(),
         bEditing = false
         (findViewById<TextView>(R.id.edit_selected_zone_btn)).text =
             getString(R.string.edit_selected_zone)
-    }
-
-    private fun deleteSelectedZone() {
-        polygonsToOstZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
-        removeSelectedZoneFromMap()
-    }
-
-    private fun removeSelectedZoneFromMap() {
-        selectedPolygon?.remove()
-        polygonsToOstZones.remove(selectedPolygon)
-        selectedPolygon = null
-
-        showBottomSheetPlaceholder()
-        zoneNameEditText.setText("")
     }
 
     private fun loadSavedOstZones(){
@@ -553,7 +561,7 @@ class MapsActivity : AppCompatActivity(),
         val listAdapter = OstZoneListAdapter(this, polygonsToOstZones)
         listAdapter.onItemClick = { ostZone ->
             val centroid = Utils.computeCentroidOfPoints(ostZone.polygonPoints)
-            val selectedPolygon = polygonsToOstZones.filterValues { it == ostZone }.keys.first()
+            val selectedPolygon = polygonFromZone(ostZone)
             googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, DEFAULT_ZOOM))
             onPolygonClick(selectedPolygon)
         }
