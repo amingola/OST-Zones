@@ -60,6 +60,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 private const val FILL_COLOR_KEY = "fillColor"
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L //milliseconds
+private const val FREEHAND_MARKER_DRAW_FREQUENCY = 10   //every nth marker will be drawn
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
@@ -231,15 +232,13 @@ class MapsActivity : AppCompatActivity(),
                 }
 
                 override fun onFailure(throwable: Throwable){
-                    when (throwable) {
-                        is CouldNotFindSpotifyApp -> {
-                            Utils.longToast(this@MapsActivity,
-                                getString(R.string.spotify_not_installed_warning))
-                            Log.e(logTag, throwable.message!!)
-                        }else ->{
+                    if (throwable is CouldNotFindSpotifyApp) {
+                        Utils.longToast(this@MapsActivity,
+                            getString(R.string.spotify_not_installed_warning))
+                        Log.e(logTag, throwable.message!!)
+                    } else {
                         Utils.longToast(this@MapsActivity,
                             getString(R.string.spotify_failed_to_connect_warning))
-                        }
                     }
                 }
             }
@@ -274,8 +273,7 @@ class MapsActivity : AppCompatActivity(),
     override fun onMarkerDragStart(marker: Marker) {}
 
     override fun onMarkerDrag(marker: Marker) {
-        //Only add a marker every 10th "tick"
-        if(freehandMarkerCounter % 10 == 0){
+        if(freehandMarkerCounter % FREEHAND_MARKER_DRAW_FREQUENCY == 0){
             polyline?.remove()
             freehandPoints.add(marker.position)
             polyline = googleMap.addPolyline(PolylineOptions().addAll(freehandPoints))
@@ -410,15 +408,15 @@ class MapsActivity : AppCompatActivity(),
     }
 
     private fun drawOstZoneOnMapAndSave(existingOstZone: OstZone?): OstZone {
-        val points = freehandPoints.toList()
-        val polygon = googleMap.addPolygon(Utils.createPolygonOptions(points, polygonOptions))
+        val newPoints = freehandPoints.toList()
+        val newPolygon = googleMap.addPolygon(Utils.createPolygonOptions(newPoints, polygonOptions))
         val savedOstZone: OstZone = if(existingOstZone == null)
-            createNewOstZone(points, polygon)
+            createNewOstZone(newPoints, newPolygon)
         else
-            overwriteExistingOstZone(existingOstZone, points, polygon)
+            overwriteExistingOstZone(existingOstZone, newPoints, newPolygon)
 
         initOstZoneRecyclerView()
-        onPolygonClick(polygon)
+        onPolygonClick(newPolygon)
         return savedOstZone
     }
 
@@ -428,13 +426,13 @@ class MapsActivity : AppCompatActivity(),
         return ostZone
     }
 
-    private fun overwriteExistingOstZone(existingOstZone: OstZone, points: List<LatLng>, polygon: Polygon): OstZone {
-        existingOstZone.polygonPoints = points
+    private fun overwriteExistingOstZone(existingOstZone: OstZone, newPoints: List<LatLng>, newPolygon: Polygon): OstZone {
+        existingOstZone.polygonPoints = newPoints
         existingOstZone.polygonOptions = polygonOptions
         val updatedOstZone = databaseHelper.updateOstZone(existingOstZone)
 
         polygonsToOstZones.remove(selectedPolygon)
-        polygonsToOstZones[polygon] = existingOstZone
+        polygonsToOstZones[newPolygon] = existingOstZone
 
         removeSelectedZoneFromMap()
         return updatedOstZone
