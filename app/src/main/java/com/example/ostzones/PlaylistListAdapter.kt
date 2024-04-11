@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.api.models.Playlist
 
 class PlaylistListAdapter(private val context: Context,
-                          var playlists: List<Playlist>) :
+                          private var playlists: List<Playlist>) :
     RecyclerView.Adapter<PlaylistListAdapter.ViewHolder>() {
 
     var onItemClick: ((Playlist) -> Unit)? = null

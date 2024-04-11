@@ -15,10 +15,15 @@ class AuthInterceptor(private val authToken: String?) : Interceptor {
             .addHeader("Authorization", "Bearer $authToken")
             .build()
         val response = chain.proceed(request)
-        if (response.code == 401) {
-            handleMissingToken(response)
+        when (response.code) {
+            400 -> handleInvalidClient(response)
+            401 -> handleMissingToken(response)
         }
         return response
+    }
+
+    private fun handleInvalidClient(response: Response) {
+        Log.e("AuthInterceptor", "Invalid client error: ${response.message}")
     }
 
     //401
