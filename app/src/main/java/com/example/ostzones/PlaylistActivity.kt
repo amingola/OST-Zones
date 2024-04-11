@@ -137,9 +137,6 @@ class PlaylistActivity : AppCompatActivity() {
 
     private fun initPlaylistsRecyclerView() {
         val listAdapter = PlaylistListAdapter(this, playlists)
-        /*listAdapter.onItemClick = { playlist: Playlist ->
-            spotifyAppRemote?.playerApi?.play(playlist.uri)
-        }*/
 
         playlistsRecyclerView = findViewById(R.id.playlists_recycler_view)
         playlistsRecyclerView.also {
@@ -158,9 +155,7 @@ class PlaylistActivity : AppCompatActivity() {
     }
 
     fun onSaveButtonClick(view: View) {
-        val str = playlists.filter { p -> p.isChecked }.joinToString(", ") { p -> p.name }
         val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toCollection(ArrayList())
-        Utils.toast(this, str)
 
         val resultIntent = Intent()
         resultIntent.putStringArrayListExtra("uris", uris)
