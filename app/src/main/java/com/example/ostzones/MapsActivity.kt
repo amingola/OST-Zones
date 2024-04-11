@@ -362,7 +362,7 @@ class MapsActivity : AppCompatActivity(),
 
     fun zonesNavClick(item: MenuItem) {
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-        showBottomSheetPlaceholder()
+        showBottomSheetOstZoneList()
     }
 
     fun ostsNavClick(item: MenuItem) {
@@ -469,7 +469,7 @@ class MapsActivity : AppCompatActivity(),
         polygonsToOstZones.remove(selectedPolygon)
         selectedPolygon = null
 
-        showBottomSheetPlaceholder()
+        showBottomSheetOstZoneList()
         zoneNameEditText.setText("")
 
         initOstZoneRecyclerView()
@@ -505,13 +505,15 @@ class MapsActivity : AppCompatActivity(),
     }
 
     private fun showBottomSheetEditFunctionality() {
-        findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.GONE
+        findViewById<View>(R.id.bottom_sheet_ost_zone_list).visibility = View.GONE
         findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.VISIBLE
     }
 
-    private fun showBottomSheetPlaceholder() {
+    private fun showBottomSheetOstZoneList() {
         findViewById<View>(R.id.bottom_sheet_functionality).visibility = View.GONE
-        findViewById<View>(R.id.bottom_sheet_placeholder).visibility = View.VISIBLE
+        findViewById<View>(R.id.bottom_sheet_ost_zone_list).visibility = View.VISIBLE
+        val visibility = if(polygonsToOstZones.isEmpty()) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.no_ost_zones_label).visibility = visibility
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -291,4 +291,5 @@
     <string name="spotify_not_installed_warning">You must install spotify to play music from this device!</string>
     <string name="spotify_failed_to_connect_warning">Could not connect to Spotify. Relaunch the app, or open Spotify and play something to set this as the current device.</string>
     <string name="start_drawing_zone_toast">Tap to place the first marker, then drag it to draw a zone.</string>
+    <string name="no_ost_zones_warning">You have no OST Zones yet</string>
 </resources>

@@ -62,9 +62,16 @@
 
         <!--No-zone-selected functionality-->
         <LinearLayout
-            android:id="@+id/bottom_sheet_placeholder"
+            android:id="@+id/bottom_sheet_ost_zone_list"
             android:orientation="vertical"
             android:visibility="gone">
+            <TextView
+                android:id="@+id/no_ost_zones_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/no_ost_zones_warning"
+                android:textSize="16sp">
+            </TextView>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/ost_zones_recycler_view"
                 android:layout_width="match_parent"

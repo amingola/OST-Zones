@@ -3,4 +3,5 @@
     <item name="delete_selected_zone_btn" type="id" />
     <item name="coordinator_layout" type="id" />
     <item name="bottom_navigation" type="id" />
+    <item name="no_ost_zones_label" type="id" />
 </resources>
