@@ -97,7 +97,7 @@ class DatabaseHelper(context: Context) :
         return allOstZones
     }
 
-    fun removePolygon(id: Long): Int{
+    fun removeOstZone(id: Long): Int{
         val db = this.writableDatabase
         val result = db.delete(TABLE_NAME, "$KEY_ID = ?", arrayOf(id.toString()))
         db.close()

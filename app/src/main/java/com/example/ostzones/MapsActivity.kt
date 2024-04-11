@@ -331,7 +331,7 @@ class MapsActivity : AppCompatActivity(),
     }
 
     fun deleteSelectedZoneClick(view: View) {
-        polygonsToOstZones[selectedPolygon]?.id?.let { databaseHelper.removePolygon(it) }
+        polygonsToOstZones[selectedPolygon]?.id?.let { databaseHelper.removeOstZone(it) }
         removeSelectedZoneFromMap()
     }
 
@@ -469,6 +469,8 @@ class MapsActivity : AppCompatActivity(),
 
         showBottomSheetPlaceholder()
         zoneNameEditText.setText("")
+
+        initOstZoneRecyclerView()
     }
 
     private fun loadOstZoneToMap(ostZone: OstZone){
@@ -559,18 +561,20 @@ class MapsActivity : AppCompatActivity(),
 
     private fun initOstZoneRecyclerView() {
         val listAdapter = OstZoneListAdapter(this, polygonsToOstZones)
-        listAdapter.onItemClick = { ostZone ->
-            val centroid = Utils.computeCentroidOfPoints(ostZone.polygonPoints)
-            val selectedPolygon = polygonFromZone(ostZone)
-            val zoom = Utils.calculateZoomLevel(resources, selectedPolygon.points)
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, zoom))
-            onPolygonClick(selectedPolygon)
-        }
+        listAdapter.onItemClick = { ostZone -> onOstZoneListItemClick(ostZone) }
         ostZonesRecyclerView = findViewById(R.id.ost_zones_recycler_view)
         ostZonesRecyclerView.also {
             it.adapter = listAdapter
             it.layoutManager = LinearLayoutManager(this)
         }
+    }
+
+    private fun onOstZoneListItemClick(ostZone: OstZone) {
+        val centroid = Utils.computeCentroidOfPoints(ostZone.polygonPoints)
+        val selectedPolygon = polygonFromZone(ostZone)
+        val zoom = Utils.calculateZoomLevel(resources, selectedPolygon.points)
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(centroid, zoom))
+        onPolygonClick(selectedPolygon)
     }
 
     private fun updatePolygonArgbComponents() {
