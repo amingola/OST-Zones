@@ -26,12 +26,12 @@ object Utils {
         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
     }
 
-    fun createPolygonOptions(points: List<LatLng>, polygonOptions: HashMap<String, Any>): PolygonOptions {
+    fun createPolygonOptions(points: List<LatLng>, basicPolygonOptions: HashMap<String, Any>): PolygonOptions {
         return PolygonOptions().apply {
             addAll(points)
-            fillColor(polygonOptions["fillColor"] as Int)
-            strokeColor(polygonOptions["strokeColor"] as Int)
-            clickable(polygonOptions["clickable"] as Boolean)
+            fillColor(basicPolygonOptions[FILL_COLOR_KEY] as Int)
+            strokeColor(basicPolygonOptions[STROKE_COLOR_KEY] as Int)
+            clickable(basicPolygonOptions[CLICKABLE_KEY] as Boolean)
         }
     }
 
