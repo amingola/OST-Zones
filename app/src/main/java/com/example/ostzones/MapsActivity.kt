@@ -58,7 +58,9 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-private const val FILL_COLOR_KEY = "fillColor"
+const val FILL_COLOR_KEY = "fillColor"
+const val STROKE_COLOR_KEY = "strokeColor"
+const val CLICKABLE_KEY = "clickable"
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L //milliseconds
 private const val FREEHAND_MARKER_DRAW_FREQUENCY = 10   //every nth marker to be drawn when free-hand drawing
 private const val DEFAULT_ZOOM = 18f
@@ -78,11 +80,6 @@ class MapsActivity : AppCompatActivity(),
     private val logTag = "MapsActivity"
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val databaseHelper = DatabaseHelper(this)
-    private val polygonOptions = hashMapOf<String, Any>(
-        "fillColor" to Color.RED,
-        "strokeColor" to Color.BLACK,
-        "clickable" to true
-    )
     private val redirectUri = "com.example.ostzones://login"
     private val scopes = arrayOf(
         "user-read-private",
@@ -266,8 +263,7 @@ class MapsActivity : AppCompatActivity(),
         return false //Return false to not consume the event/animate to the user's current position
     }
 
-    override fun onMyLocationClick(location: Location) =
-        Utils.toast(this, "Current location:\n$location")
+    override fun onMyLocationClick(location: Location){}
 
     override fun onMarkerClick(marker: Marker) = true
     override fun onMarkerDragStart(marker: Marker) {}
@@ -421,8 +417,10 @@ class MapsActivity : AppCompatActivity(),
         val savedOstZone: OstZone?
 
         if(existingOstZone == null) {
-            newPolygon = googleMap.addPolygon(Utils.createPolygonOptions(newPoints, polygonOptions))
-            savedOstZone = createNewOstZone(newPoints, newPolygon)
+            val newBasicPolygonOptions = polygonOptionsColor()
+            val newPolygonOptions = Utils.createPolygonOptions(newPoints, newBasicPolygonOptions)
+            newPolygon = googleMap.addPolygon(newPolygonOptions)
+            savedOstZone = createNewOstZone(newPoints, newPolygon, newBasicPolygonOptions)
         } else {
             val newPolygonOptions = Utils.createPolygonOptions(newPoints, existingOstZone.polygonOptions)
             newPolygon = googleMap.addPolygon(newPolygonOptions)
@@ -434,8 +432,12 @@ class MapsActivity : AppCompatActivity(),
         return savedOstZone
     }
 
-    private fun createNewOstZone(points: List<LatLng>, polygon: Polygon): OstZone {
-        val ostZone = databaseHelper.saveOstZone(OstZone("Untitled ${points.size}", points, polygonOptions))
+    private fun createNewOstZone(
+        points: List<LatLng>,
+        polygon: Polygon,
+        newPolygonOptions: HashMap<String, Any>
+    ): OstZone {
+        val ostZone = databaseHelper.saveOstZone(OstZone("Untitled ${points.size}", points, newPolygonOptions))
         polygonsToOstZones[polygon] = ostZone
         return ostZone
     }
@@ -603,6 +605,17 @@ class MapsActivity : AppCompatActivity(),
 
     private fun startCheckWhenUserIsInOstZoneTask() =
         handler.postDelayed(checkUserIsInOstZoneTask, CHECK_LOCATION_TASK_FREQUENCY)
+
+    private fun polygonOptionsColor(): HashMap<String, Any> {
+        return hashMapOf(
+            FILL_COLOR_KEY to randomRgb(),
+            STROKE_COLOR_KEY to Color.BLACK,
+            CLICKABLE_KEY to true
+        )
+    }
+
+    private fun randomRgb() =
+        Color.argb(255, (0..255).random(), (0..255).random(), (0..255).random())
 
     private fun halfOpacityOfColor(color: Int): Int{
         val a = Utils.getColorComponentDecimalValue(color, SeekBarColor.ALPHA).toFloat() / 2
