@@ -23,7 +23,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -31,6 +30,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.api.ApiService
 import com.example.ostzones.api.ApiServiceFactory
+import com.example.ostzones.api.auth.SpotifyAppRemoteFactory
 import com.example.ostzones.databinding.ActivityMapsBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -47,13 +47,11 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.spotify.android.appremote.api.ConnectionParams
-import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
-import com.spotify.android.appremote.api.error.CouldNotFindSpotifyApp
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
+import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -61,13 +59,15 @@ import java.util.concurrent.ScheduledExecutorService
 const val FILL_COLOR_KEY = "fillColor"
 const val STROKE_COLOR_KEY = "strokeColor"
 const val CLICKABLE_KEY = "clickable"
+const val redirectUri = "com.example.ostzones://login"
+
 private const val CHECK_LOCATION_TASK_FREQUENCY = 1000L //milliseconds
 private const val FREEHAND_MARKER_DRAW_FREQUENCY = 10   //every nth marker to be drawn when free-hand drawing
 private const val DEFAULT_ZOOM = 18f
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1
 private const val PLAYLIST_ACTIVITY_REQUEST_CODE = 1000
 
-class MapsActivity : AppCompatActivity(),
+class MapsActivity : SpotifyActivity(),
     OnMapClickListener,
     OnMapReadyCallback,
     OnMarkerClickListener,
@@ -75,12 +75,12 @@ class MapsActivity : AppCompatActivity(),
     OnPolygonClickListener,
     GoogleMap.OnMyLocationButtonClickListener,
     GoogleMap.OnMyLocationClickListener,
-    ActivityCompat.OnRequestPermissionsResultCallback {
+    ActivityCompat.OnRequestPermissionsResultCallback,
+    SpotifyCallback{
 
     private val logTag = "MapsActivity"
     private val polygonsToOstZones: HashMap<Polygon, OstZone> = hashMapOf()
     private val databaseHelper = DatabaseHelper(this)
-    private val redirectUri = "com.example.ostzones://login"
     private val scopes = arrayOf(
         "user-read-private",
         "streaming",
@@ -89,13 +89,14 @@ class MapsActivity : AppCompatActivity(),
         "playlist-read-collaborative"
     )
 
+    private var token: String? = null
     private var bDrawing = false
     private var bEditing = false
     private var selectedPolygon: Polygon? = null
     private var polyline: Polyline? = null
     private var freehandMarker: Marker? = null
     private var idOfOstZonePlayingMusic: Long? = 0L
-    private var spotifyAppRemote: SpotifyAppRemote? = null //TODO move this to a factory
+    private var spotifyAppRemote: SpotifyAppRemote? = null
     private var freehandPoints: MutableSet<LatLng> = mutableSetOf()
     private var freehandMarkerCounter = 0
 
@@ -120,7 +121,9 @@ class MapsActivity : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if(savedInstanceState != null){
+
+        savedInstanceState?.let {
+            token = savedInstanceState.getString("token", "")
             idOfOstZonePlayingMusic = savedInstanceState.getLong("zonePlayingMusic", 0L)
         }
 
@@ -137,19 +140,21 @@ class MapsActivity : AppCompatActivity(),
         initEditZoneName()
         initOstZoneColorSliders()
 
-        val request = AuthorizationRequest.Builder(
-            BuildConfig.SPOTIFY_CLIENT_ID,
-            AuthorizationResponse.Type.TOKEN,
-            redirectUri
-        ).setScopes(scopes).build()
+        if(token == null){
+            val request = AuthorizationRequest.Builder(
+                BuildConfig.SPOTIFY_CLIENT_ID,
+                AuthorizationResponse.Type.TOKEN,
+                redirectUri
+            ).setScopes(scopes).build()
 
-        AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
+            AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        if(idOfOstZonePlayingMusic != null)
-            outState.putLong("zonePlayingMusic", idOfOstZonePlayingMusic!!)
+        token?.let{ outState.putString("token", it) }
+        idOfOstZonePlayingMusic?.let { outState.putLong("zonePlayingMusic", it) }
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -177,10 +182,9 @@ class MapsActivity : AppCompatActivity(),
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if(requestCode == PLAYLIST_ACTIVITY_REQUEST_CODE){
-            handlePlaylistActivityFinish(resultCode, data)
-        }else if(requestCode == com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE){
-            handleSpotifyLoginFinish(resultCode, data)
+        when (requestCode) {
+            PLAYLIST_ACTIVITY_REQUEST_CODE -> handlePlaylistActivityFinish(resultCode, data)
+            REQUEST_CODE -> handleSpotifyLoginFinish(resultCode, data)
         }
     }
 
@@ -191,7 +195,8 @@ class MapsActivity : AppCompatActivity(),
             lifecycleScope.launch {
                 try {
                     handleSuccessfulLogin(response)
-                } catch (e: Exception) {
+                }
+                catch (e: Exception) {
                     Log.e(logTag, e.message!!)
                 }
             }
@@ -208,38 +213,11 @@ class MapsActivity : AppCompatActivity(),
     }
 
     private fun handleSuccessfulLogin(response: AuthorizationResponse) {
-        initializeSpotifyAppRemote()
+        SpotifyAppRemoteFactory.getSpotifyAppRemote(this)
         startCheckWhenUserIsInOstZoneTask()
 
-        val token = response.accessToken
-        apiService = ApiServiceFactory.getApiService(token)
-    }
-
-    private fun initializeSpotifyAppRemote() {
-        val connectionParams = ConnectionParams.Builder(BuildConfig.SPOTIFY_CLIENT_ID)
-            .setRedirectUri(redirectUri)
-            .showAuthView(true)
-            .build()
-
-        SpotifyAppRemote.connect(this, connectionParams,
-            object : Connector.ConnectionListener {
-                override fun onConnected(spotifyAppRemote: SpotifyAppRemote) {
-                    this@MapsActivity.spotifyAppRemote = spotifyAppRemote
-                    Log.d(logTag, "Connected to Spotify")
-                }
-
-                override fun onFailure(throwable: Throwable){
-                    if (throwable is CouldNotFindSpotifyApp) {
-                        Utils.longToast(this@MapsActivity,
-                            getString(R.string.spotify_not_installed_warning))
-                        Log.e(logTag, throwable.message!!)
-                    } else {
-                        Utils.longToast(this@MapsActivity,
-                            getString(R.string.spotify_failed_to_connect_warning))
-                    }
-                }
-            }
-        )
+        token = response.accessToken
+        apiService = ApiServiceFactory.getApiService(token!!)
     }
 
     override fun onDestroy() {
@@ -266,6 +244,7 @@ class MapsActivity : AppCompatActivity(),
     override fun onMyLocationClick(location: Location){}
 
     override fun onMarkerClick(marker: Marker) = true
+
     override fun onMarkerDragStart(marker: Marker) {}
 
     override fun onMarkerDrag(marker: Marker) {
@@ -642,9 +621,11 @@ class MapsActivity : AppCompatActivity(),
                         .values.firstOrNull()
                 }
 
-                Log.d("location check", "User is inside ${occupiedOstZone?.name}")
+                //Log.d("location check", "User is inside ${occupiedOstZone?.name}")
 
-                if(occupiedOstZone != null && occupiedOstZone.id != idOfOstZonePlayingMusic){
+                if(spotifyAppRemote != null &&
+                    occupiedOstZone != null &&
+                    occupiedOstZone.id != idOfOstZonePlayingMusic){
                     idOfOstZonePlayingMusic = Utils.playRandom(spotifyAppRemote?.playerApi, occupiedOstZone)
                 }else if(occupiedOstZone == null){
                     spotifyAppRemote?.playerApi?.pause()
@@ -662,5 +643,9 @@ class MapsActivity : AppCompatActivity(),
         } catch (e: UninitializedPropertyAccessException) {
             null //Just eat this; locationManager init is hit-or-miss :/
         }
+    }
+
+    override fun setSpotifyAppRemote(spotifyAppRemote: SpotifyAppRemote) {
+        this.spotifyAppRemote = spotifyAppRemote
     }
 }

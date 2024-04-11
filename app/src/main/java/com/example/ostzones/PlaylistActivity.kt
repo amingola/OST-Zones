@@ -6,17 +6,14 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.api.ApiService
 import com.example.ostzones.api.ApiServiceFactory
+import com.example.ostzones.api.auth.SpotifyAppRemoteFactory
 import com.example.ostzones.api.models.Playlist
-import com.spotify.android.appremote.api.ConnectionParams
-import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
-import com.spotify.android.appremote.api.error.CouldNotFindSpotifyApp
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -27,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
-class PlaylistActivity : AppCompatActivity() {
+class PlaylistActivity : SpotifyActivity(), SpotifyCallback {
 
     private val logTag = "PlaylistDemoActivity"
     private val redirectUri = "com.example.ostzones://login"
@@ -88,7 +85,7 @@ class PlaylistActivity : AppCompatActivity() {
     }
 
     private suspend fun handleSuccessfulLogin(response: AuthorizationResponse) {
-        initializeSpotifyAppRemote()
+        SpotifyAppRemoteFactory.getSpotifyAppRemote(this)
 
         val token = response.accessToken
         apiService = ApiServiceFactory.getApiService(token)
@@ -103,36 +100,6 @@ class PlaylistActivity : AppCompatActivity() {
                 initPlaylistsRecyclerView()
             }
         }
-    }
-
-    private fun initializeSpotifyAppRemote() {
-        val connectionParams = ConnectionParams.Builder(BuildConfig.SPOTIFY_CLIENT_ID)
-            .setRedirectUri(redirectUri)
-            .showAuthView(true)
-            .build()
-
-        SpotifyAppRemote.connect(this, connectionParams,
-            object : Connector.ConnectionListener {
-                override fun onConnected(spotifyAppRemote: SpotifyAppRemote) {
-                    this@PlaylistActivity.spotifyAppRemote = spotifyAppRemote
-                    Log.d(logTag, "Connected to Spotify")
-                }
-
-                override fun onFailure(throwable: Throwable){
-                    when (throwable) {
-                        is CouldNotFindSpotifyApp -> {
-                            Utils.longToast(this@PlaylistActivity,
-                                "You must install spotify to play music from this device!")
-                            Log.e(logTag, throwable.message!!)
-                        }else ->{
-                            Utils.longToast(this@PlaylistActivity,
-                                "Couldn't connect to Spotify. Relaunch the app, or open Spotify" +
-                                        " and play something to set this as the current device.")
-                        }
-                    }
-                }
-            }
-        )
     }
 
     private fun initPlaylistsRecyclerView() {
@@ -161,5 +128,9 @@ class PlaylistActivity : AppCompatActivity() {
         resultIntent.putStringArrayListExtra("uris", uris)
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
+    }
+
+    override fun setSpotifyAppRemote(spotifyAppRemote: SpotifyAppRemote) {
+        this.spotifyAppRemote = spotifyAppRemote
     }
 }
