@@ -3,11 +3,31 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="8dp">
-    <CheckBox
-        android:id="@+id/playlist_checkbox"
+    android:padding="8dp"
+    android:background="@drawable/playlist_background_selector">
+    <ImageView
+        android:id="@+id/playlist_icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:textSize="16sp"/>
+        android:contentDescription="@string/playlist_icon_description"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/playlist_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/playlist_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"/>
+    </LinearLayout>
+
 </LinearLayout>

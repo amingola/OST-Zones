@@ -4,12 +4,14 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ostzones.api.models.Playlist
+import com.squareup.picasso.Picasso
 
 class PlaylistListAdapter(private val context: Context,
-                          var playlists: List<Playlist>) :
+                          private var playlists: List<Playlist>) :
     RecyclerView.Adapter<PlaylistListAdapter.ViewHolder>() {
 
     var onItemClick: ((Playlist) -> Unit)? = null
@@ -22,13 +24,27 @@ class PlaylistListAdapter(private val context: Context,
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val playlist = playlists[position]
 
-        holder.checkBox.text = playlist.name
-        holder.checkBox.isChecked = playlist.isChecked
-        holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
-            playlist.isChecked = isChecked
-        }
+        holder.playlistName.text = playlist.name
 
-        holder.bind(playlist)
+        val numTracks: Long = playlist.tracks?.total ?: 0
+        holder.playlistDescription.text =
+            context.getString(R.string.playlist_description, numTracks)
+
+        val background =
+            if(playlist.isChecked) R.drawable.selected_playlist_background_color
+            else R.drawable.unselected_playlist_background_color
+        holder.itemView.setBackgroundResource(background)
+
+        val backgroundUrl = playlist.images?.first()?.url
+        Picasso.get()
+            .load(backgroundUrl)
+            .resize(150, 150)
+            .into(holder.playlistIcon)
+
+        holder.itemView.setOnClickListener {
+            playlist.isChecked = !playlist.isChecked
+            notifyItemChanged(holder.adapterPosition)
+        }
     }
 
     override fun getItemCount(): Int {
@@ -36,20 +52,8 @@ class PlaylistListAdapter(private val context: Context,
     }
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-//        private val textViewName: TextView = itemView.findViewById(R.id.ostZoneNameTextView)
-//        private val textViewDescription: TextView = itemView.findViewById(R.id.textViewDescription)
-        val checkBox: CheckBox = itemView.findViewById(R.id.playlist_checkbox)
-
-        init{
-            /*itemView.setOnClickListener {
-                val selectedTrack = playlists[adapterPosition]
-                onItemClick?.invoke(selectedTrack)
-            }*/
-        }
-
-        fun bind(playlist: Playlist) {
-//            textViewName.text = playlist.name
-//            textViewDescription.text = ostZone.id.toString()
-        }
+        internal val playlistName: TextView = itemView.findViewById(R.id.playlist_name)
+        internal val playlistIcon: ImageView = itemView.findViewById(R.id.playlist_icon)
+        internal val playlistDescription: TextView = itemView.findViewById(R.id.playlist_description)
     }
 }
