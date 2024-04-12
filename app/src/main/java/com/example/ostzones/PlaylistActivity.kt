@@ -47,8 +47,6 @@ class PlaylistActivity : SpotifyActivity(), SpotifyCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playlist)
 
-        //TODO save auth details and only do auth stuff if it's null
-
         val request = AuthorizationRequest.Builder(
             BuildConfig.SPOTIFY_CLIENT_ID,
             AuthorizationResponse.Type.TOKEN,
