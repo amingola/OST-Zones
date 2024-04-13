@@ -3,57 +3,33 @@ package com.example.ostzones
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.View
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ostzones.api.ApiService
-import com.example.ostzones.api.ApiServiceFactory
-import com.example.ostzones.api.auth.SpotifyAppRemoteFactory
 import com.example.ostzones.api.models.Playlist
-import com.spotify.android.appremote.api.SpotifyAppRemote
-import com.spotify.sdk.android.auth.AuthorizationClient
-import com.spotify.sdk.android.auth.AuthorizationRequest
-import com.spotify.sdk.android.auth.AuthorizationResponse
-import com.spotify.sdk.android.auth.LoginActivity.REQUEST_CODE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 const val SPOTIFY_LOGIN_REQUEST_CODE = 1138
 
-class PlaylistActivity : SpotifyActivity(), SpotifyCallback {
-
-    private val logTag = "PlaylistDemoActivity"
-    private val redirectUri = "com.example.ostzones://login"
-    private val scopes = arrayOf(
-        "user-read-private",
-        "streaming",
-        "user-modify-playback-state",
-        "playlist-read-private",
-        "playlist-read-collaborative"
-    )
+class PlaylistActivity : SpotifyActivity() {
 
     private var playlists = listOf<Playlist>()
-    private var spotifyAppRemote: SpotifyAppRemote? = null
 
     private lateinit var playlistsRecyclerView: RecyclerView
-    private lateinit var apiService: ApiService
-    private lateinit var userId: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playlist)
 
-        val request = AuthorizationRequest.Builder(
-            BuildConfig.SPOTIFY_CLIENT_ID,
-            AuthorizationResponse.Type.TOKEN,
-            redirectUri
-        ).setScopes(scopes).build()
-
-        AuthorizationClient.openLoginActivity(this, SPOTIFY_LOGIN_REQUEST_CODE, request)
+        if(authenticated){
+            lifecycleScope.launch {
+                loadPlaylists()
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -61,43 +37,32 @@ class PlaylistActivity : SpotifyActivity(), SpotifyCallback {
         return true
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE) {
-            val response = AuthorizationClient.getResponse(resultCode, data)
-
-            if (response.type == AuthorizationResponse.Type.TOKEN) {
-                lifecycleScope.launch {
-                    try {
-                        handleSuccessfulLogin(response)
-                    } catch (e: Exception) {
-                        Log.e(logTag, e.message!!)
-                    }
-                }
-            } else if (response.type == AuthorizationResponse.Type.ERROR) {
-                Utils.longToast(this, response.error)
-            }
-        }
-    }
-
-    private suspend fun handleSuccessfulLogin(response: AuthorizationResponse) {
-        SpotifyAppRemoteFactory.getSpotifyAppRemote(this)
-
-        val token = response.accessToken
-        apiService = ApiServiceFactory.getApiService(token)
-
+    override suspend fun handleSuccessfulLogin() {
         withContext(Dispatchers.IO) {
             userId = apiService.getUserId().id!!
         }
 
+        loadPlaylists()
+    }
+
+    private suspend fun loadPlaylists() {
         withContext(Dispatchers.IO) {
-            playlists = apiService.getUserPlaylists(userId).items
+            playlists = apiService.getUserPlaylists(userId!!).items
             runOnUiThread {
                 initPlaylistsRecyclerView()
             }
         }
+    }
+
+    override fun handlePlaylistActivityFinish(resultCode: Int, data: Intent?) {}
+
+    fun onSaveButtonClick(view: View) {
+        val resultIntent = Intent()
+        val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toCollection(ArrayList())
+
+        resultIntent.putStringArrayListExtra("uris", uris)
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
     }
 
     private fun initPlaylistsRecyclerView() {
@@ -115,20 +80,7 @@ class PlaylistActivity : SpotifyActivity(), SpotifyCallback {
     private fun initializeExistingPlaylistSelections() {
         val selectedPlaylistsUris = intent.getStringArrayListExtra("selectedUris")
         selectedPlaylistsUris?.forEach {
-                uri -> playlists.find { playlist -> playlist.uri == uri }?.isChecked = true
+            uri -> playlists.find { it.uri == uri }?.isChecked = true
         }
-    }
-
-    fun onSaveButtonClick(view: View) {
-        val uris = playlists.filter { p -> p.isChecked }.map { p -> p.uri }.toCollection(ArrayList())
-
-        val resultIntent = Intent()
-        resultIntent.putStringArrayListExtra("uris", uris)
-        setResult(Activity.RESULT_OK, resultIntent)
-        finish()
-    }
-
-    override fun setSpotifyAppRemote(spotifyAppRemote: SpotifyAppRemote) {
-        this.spotifyAppRemote = spotifyAppRemote
     }
 }
